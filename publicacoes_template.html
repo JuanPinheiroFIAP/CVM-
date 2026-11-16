@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Publicações CVM</title>
+<style>
+:root{--bg:#f6f7f9;--card:#fff;--ink:#14181f;--mut:#5d6675;--line:#e3e6ec;--acc:#cc092f;--pos:#0b7a53;--neg:#b42318;--chip:#eef0f4;--sel:#fff3f5;--peer:#7a869a}
+@media (prefers-color-scheme:dark){:root{--bg:#0f1218;--card:#171b23;--ink:#e8ebf0;--mut:#9aa4b5;--line:#272d38;--acc:#ff4d6d;--pos:#3ecf8e;--neg:#ff7a70;--chip:#222833;--sel:#2a1d24;--peer:#8c97ab}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 system-ui,Segoe UI,Roboto,sans-serif}
+header{padding:14px 20px;background:var(--card);border-bottom:1px solid var(--line);display:flex;gap:16px;align-items:baseline;flex-wrap:wrap}
+h1{font-size:18px;margin:0}h2{font-size:15px;margin:0 0 8px}.sub{color:var(--mut);font-size:12px}
+nav{display:flex;gap:4px;padding:10px 20px 0;flex-wrap:wrap}
+nav button{border:1px solid var(--line);border-bottom:0;background:var(--chip);color:var(--ink);padding:8px 14px;border-radius:8px 8px 0 0;cursor:pointer;font:inherit}
+nav button.on{background:var(--card);color:var(--acc);font-weight:600}
+nav small{color:var(--mut);margin-left:5px}
+main{padding:0 20px 20px;max-width:1550px;margin:auto}
+.panel{display:none;background:var(--card);border:1px solid var(--line);border-radius:0 10px 10px 10px;padding:14px}.panel.on{display:block}
+.ctrl{display:flex;flex-wrap:wrap;gap:12px 18px;align-items:flex-end;margin-bottom:10px}
+.ctrl label{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--mut)}
+input,select{background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:7px;padding:6px 8px;font:inherit}
+input[type=text]{min-width:260px}
+.kpis{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px}.kpi{border:1px solid var(--line);border-radius:9px;padding:8px 12px}.kpi b{font-size:18px;display:block}.kpi span{font-size:12px;color:var(--mut)}
+table{border-collapse:collapse;width:100%}
+th,td{padding:6px 9px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+th{position:sticky;top:0;background:var(--card);cursor:pointer;font-size:12px;color:var(--mut);user-select:none;white-space:nowrap}
+td.n,th.n{text-align:right;white-space:nowrap}td.w{white-space:nowrap}
+tbody tr:hover{background:var(--sel)}
+.scroll{overflow:auto;max-height:640px;border:1px solid var(--line);border-radius:8px}
+.pager{display:flex;gap:10px;align-items:center;margin-top:8px;color:var(--mut)}
+button.b{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:6px;padding:4px 10px;cursor:pointer}
+a{color:var(--acc);text-decoration:none}a:hover{text-decoration:underline}
+.tag{display:inline-block;background:var(--chip);border-radius:5px;padding:1px 7px;font-size:12px;margin-right:4px;color:var(--mut);white-space:nowrap}
+.pos{color:var(--pos)}.neg{color:var(--neg)}.mut{color:var(--mut)}
+.split{display:grid;grid-template-columns:340px 1fr;gap:14px}@media(max-width:1000px){.split{grid-template-columns:1fr}}
+.list{max-height:700px;overflow:auto;border:1px solid var(--line);border-radius:8px}
+.list div{padding:7px 10px;border-bottom:1px solid var(--line);cursor:pointer}.list div:hover,.list div.on{background:var(--sel)}
+.list small{display:block;color:var(--mut)}
+.bar{height:12px;border-radius:3px;display:inline-block;vertical-align:middle}
+mark{background:#ffe27a;color:#000;border-radius:2px}
+</style>
+</head>
+<body>
+<header><h1>Publicações CVM</h1><span class="sub" id="hdr"></span>
+<span class="sub" style="margin-left:auto">Fonte: dados abertos CVM (IPE · Eventuais de fundos · CDA). Links abrem o documento no portal da CVM.</span>
+<button class="b" onclick="baixarTudoJSON()" title="todas as abas em um único arquivo">⬇ Baixar tudo (JSON)</button></header>
+<nav id="tabs"></nav>
+<main id="main"></main>
+
+<script>
+const D=/*__DADOS__*/null, M=D.meta;
+const $=(id)=>document.getElementById(id);
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const nf=(x,d=1)=>x==null?'–':x.toLocaleString('pt-BR',{minimumFractionDigits:d,maximumFractionDigits:d});
+const dbr=s=>s?s.split('-').reverse().join('/'):'';
+const norm=s=>String(s).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+const hoje=M.ate_ipe;
+const addDays=(iso,n)=>{const d=new Date(iso+'T12:00:00');d.setDate(d.getDate()+n);return d.toISOString().slice(0,10);};
+
+// --- configuração das abas de lista
+const LISTS={
+ fr:{nome:'Fatos Relevantes',rows:D.fr,sec:{i:5,nome:'Tipo'},dims:[[2,'Empresa'],[7,'Assunto']],
+   cols:[['Entrega',0,'w'],['Empresa',2],['Assunto',7],['Ref.',1,'w'],['Link',8,'l']]},
+ rec:{nome:'Recompras',rows:D.rec,sec:{i:4,nome:'Categoria'},dims:[[2,'Empresa'],[7,'Assunto']],
+   cols:[['Entrega',0,'w'],['Empresa',2],['Categoria',4],['Espécie',6],['Assunto',7],['Link',8,'l']]},
+ ass:{nome:'Assembleias',rows:D.ass,sec:{i:5,nome:'Tipo'},sec2:{i:6,nome:'Espécie'},dims:[[2,'Empresa'],[7,'Assunto']],
+   cols:[['Entrega',0,'w'],['Empresa',2],['Tipo',5,'w'],['Espécie',6],['Assunto',7],['Ref.',1,'w'],['Link',8,'l']]},
+ ffr:{nome:'Fundos · FR e Assembleias',rows:D.ffr,sec:{i:4,nome:'Tipo'},dims:[[2,'Fundo'],[3,'CNPJ']],
+   cols:[['Recebido',0,'w'],['Fundo',2],['CNPJ',3,'w'],['Tipo',4,'w'],['Link',5,'l']],linkIdx:5}
+};
+const tabs=[...Object.keys(LISTS),'cart'];
+const state={};
+const NOMES={cart:'Composição de Carteira'};
+$('tabs').innerHTML=tabs.map(k=>`<button data-k="${k}">${(LISTS[k]||{nome:NOMES[k]}).nome}<small>${k==='cart'?D.cart.length:LISTS[k].rows.length}</small></button>`).join('');
+$('tabs').onclick=e=>{const b=e.target.closest('button'); if(b) show(b.dataset.k);};
+$('hdr').textContent=`Gerado em ${M.gerado} · companhias com entrega até ${dbr(M.ate_ipe)} · desde ${dbr(M.desde)}`+(M.mes?` · carteiras: ${M.mes.slice(4)}/${M.mes.slice(0,4)}`:'');
+
+$('main').innerHTML=Object.keys(LISTS).map(k=>`<section class="panel" id="p_${k}"></section>`).join('')+'<section class="panel" id="p_cart"></section>';
+function show(k){
+  document.querySelectorAll('#tabs button').forEach(b=>b.classList.toggle('on',b.dataset.k===k));
+  document.querySelectorAll('.panel').forEach(p=>p.classList.toggle('on',p.id==='p_'+k));
+  if(!state[k]) (k==='cart'?initCart:initList)(k);
+  try{localStorage.setItem('pubtab',k);}catch(e){}
+}
+
+// ---------- listas
+function initList(k){
+  const L=LISTS[k], st=state[k]={page:0,sort:0,dir:-1,rows:[]}; const P=$('p_'+k);
+  const uniq=i=>[...new Set(L.rows.map(r=>r[i]).filter(Boolean))].sort();
+  const sel=(id,sec)=>sec?`<label>${sec.nome}<select id="${id}_${k}"><option value="">Todos</option>${uniq(sec.i).map(v=>`<option>${esc(v)}</option>`).join('')}</select></label>`:'';
+  const minD=L.rows.length?L.rows[L.rows.length-1][0]:M.desde;
+  P.innerHTML=`<div class="ctrl">
+    <label>De<input type="date" id="de_${k}" value="${addDays(hoje,-30)}"></label>
+    <label>Até<input type="date" id="ate_${k}" value="${hoje}"></label>
+    <label>Atalho<select id="at_${k}"><option value="7">7 dias</option><option value="30" selected>30 dias</option><option value="90">90 dias</option><option value="180">180 dias</option><option value="365">12 meses</option><option value="0">Tudo</option></select></label>
+    ${sel('s1',L.sec)}${sel('s2',L.sec2)}
+    <label>Buscar (todos os termos)<input type="text" id="q_${k}" placeholder="empresa, assunto, CNPJ…"></label>
+    <span style="margin-left:auto;display:flex;gap:6px"><button class="b" id="csv_${k}" title="só o que está filtrado na tela">⬇ CSV (filtrado)</button><button class="b" id="csva_${k}" title="todos os documentos desta aba">⬇ CSV (tudo)</button></span></div>
+    <div class="kpis" id="kp_${k}"></div>
+    <div class="scroll"><table id="t_${k}"></table></div>
+    <div class="pager"><button class="b" id="pv_${k}">‹</button><span id="pg_${k}"></span><button class="b" id="nx_${k}">›</button></div>`;
+  const redo=()=>{st.page=0;renderList(k);};
+  P.querySelectorAll('input,select').forEach(el=>el.id.startsWith('at_')?el.onchange=()=>{const n=+el.value; $('de_'+k).value=n?addDays(hoje,-n):minD; $('ate_'+k).value=hoje; redo();}:el.oninput=redo);
+  $('pv_'+k).onclick=()=>{st.page=Math.max(0,st.page-1);renderList(k);}; $('nx_'+k).onclick=()=>{st.page++;renderList(k);};
+  $('csv_'+k).onclick=()=>csvList(k,false); $('csva_'+k).onclick=()=>csvList(k,true);
+  renderList(k);
+}
+const PAGE=100;
+// O RAD da CVM abre em branco no navegador; com o servidor local (servidor.py) o documento é buscado por ele.
+function linkDoc(u){
+  try{const o=window.top.location; if(/^https?:$/.test(o.protocol)&&/\/\/(www\.)?rad\.cvm\.gov\.br\//.test(u)) return o.origin+'/doc?u='+encodeURIComponent(u);}catch(e){}
+  return u;
+}
+function renderList(k){
+  const L=LISTS[k], st=state[k], de=$('de_'+k).value, ate=$('ate_'+k).value, q=norm($('q_'+k).value).split(/\s+/).filter(Boolean);
+  const s1=$('s1_'+k)?.value, s2=$('s2_'+k)?.value;
+  let rows=L.rows.filter(r=>r[0]>=de&&r[0]<=ate&&(!s1||r[L.sec.i]===s1)&&(!s2||r[L.sec2.i]===s2));
+  if(q.length) rows=rows.filter(r=>{const t=norm(r.join(' ')); return q.every(w=>t.includes(w));});
+  const c=L.cols[st.sort]||L.cols[0], ci=c[1];
+  rows=rows.slice().sort((a,b)=>String(a[ci]).localeCompare(String(b[ci]))*st.dir);
+  st.rows=rows;
+  const emp=new Set(rows.map(r=>r[2])).size, d7=rows.filter(r=>r[0]>=addDays(hoje,-7)).length;
+  $('kp_'+k).innerHTML=`<div class="kpi"><b>${rows.length.toLocaleString('pt-BR')}</b><span>documentos</span></div><div class="kpi"><b>${emp.toLocaleString('pt-BR')}</b><span>${k==='ffr'?'fundos':'empresas'}</span></div><div class="kpi"><b>${d7}</b><span>últimos 7 dias</span></div>`;
+  const pages=Math.max(1,Math.ceil(rows.length/PAGE)); st.page=Math.min(st.page,pages-1);
+  const hl=t=>{let s=esc(t); q.forEach(w=>{if(w.length>2) s=s.replace(new RegExp('('+w.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+')','ig'),'<mark>$1</mark>');}); return s;};
+  $('t_'+k).innerHTML='<thead><tr>'+L.cols.map((c,i)=>`<th data-i="${i}" class="${c[2]==='l'?'':''}">${c[0]}${st.sort===i?(st.dir>0?' ▲':' ▼'):''}</th>`).join('')+'</tr></thead><tbody>'+
+   rows.slice(st.page*PAGE,(st.page+1)*PAGE).map(r=>'<tr>'+L.cols.map(c=>{
+     const v=r[c[1]]; if(c[2]==='l') return `<td class="w">${v?`<a href="${esc(linkDoc(v))}" target="_blank" rel="noopener"title="abre o documento no portal da CVM; em alguns navegadores o arquivo é baixado em vez de aberto">abrir / baixar ↗</a>`:''}</td>`;
+     if(c[1]===0||c[1]===1&&c[2]==='w') return `<td class="w">${dbr(v)}</td>`;
+     if(c[2]==='w') return `<td class="w">${v?`<span class="tag">${esc(v)}</span>`:''}</td>`;
+     return `<td>${hl(v)}</td>`;}).join('')+'</tr>').join('')+'</tbody>';
+  $('t_'+k).querySelector('thead').onclick=e=>{const th=e.target.closest('th'); if(!th) return; const i=+th.dataset.i; if(st.sort===i) st.dir*=-1; else {st.sort=i;st.dir=i===0?-1:1;} renderList(k);};
+  $('pg_'+k).textContent=`página ${st.page+1}/${pages}`;
+}
+function baixar(nome,conteudo,tipo){
+  const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([conteudo],{type:tipo})); a.download=nome; document.body.appendChild(a); a.click(); a.remove();
+}
+const CSVQ=x=>`"${String(x??'').replace(/"/g,'""')}"`;
+function csvList(k,tudo){
+  const L=LISTS[k], st=state[k], rows=tudo?L.rows:st.rows;
+  const cols=tudo?[['Entrega/Recebido',0],['Refer\u00eancia/Compet\u00eancia',1],...L.cols.filter(c=>c[1]>1&&c[2]!=='l').map(c=>c.slice(0,2)),['Link',L.linkIdx??8]]:L.cols;
+  const uniq=[],seen=new Set(); cols.forEach(c=>{if(!seen.has(c[1])){seen.add(c[1]);uniq.push(c);}});
+  const full=tudo?(k==='ffr'?[['Recebido',0],['Compet\u00eancia',1],['Fundo',2],['CNPJ',3],['Tipo',4],['Link',5]]:[['Entrega',0],['Refer\u00eancia',1],['Empresa',2],['CNPJ',3],['Categoria',4],['Tipo',5],['Esp\u00e9cie',6],['Assunto',7],['Link',8]]):uniq;
+  const lines=[full.map(c=>CSVQ(c[0])).join(';')].concat(rows.map(r=>full.map(c=>CSVQ(r[c[1]])).join(';')));
+  baixar(`cvm_${k}_${tudo?'tudo':'filtrado'}_${hoje}.csv`,'\ufeff'+lines.join('\n'),'text/csv');
+}
+function csvCart(){
+  const lines=[['Fundo','CNPJ','ANBIMA','PL_R$mi','Tipo','Ativo','Valor_R$mil','Pct_PL','Delta_pp_vs_mes_ant'].map(CSVQ).join(';')];
+  D.cart.forEach(f=>f.top.forEach(t=>lines.push([f.n,f.id,f.a,f.pl,t[0],t[1],t[2],t[3],t[4]].map(x=>CSVQ(typeof x==='number'?String(x).replace('.',','):x)).join(';'))));
+  baixar(`cvm_carteiras_${M.mes}.csv`,'\ufeff'+lines.join('\n'),'text/csv');
+}
+function baixarTudoJSON(){ baixar(`cvm_publicacoes_${hoje}.json`,JSON.stringify(D),'application/json'); }
+
+// ---------- composição de carteira
+function initCart(){
+  const P=$('p_cart'), st=state.cart={sel:null};
+  if(!D.cart.length){P.innerHTML='<p>Sem dados de CDA.</p>';return;}
+  const anb=[...new Set(D.cart.map(f=>f.a))].sort();
+  P.innerHTML=`<div class="ctrl"><label>Classe ANBIMA<select id="c_a"><option value="">Todas</option>${anb.map(a=>`<option>${esc(a)}</option>`).join('')}</select></label>
+   <label>Fundo (nome ou CNPJ)<input type="text" id="c_q" placeholder="buscar fundo"></label>
+   <label>Quem tem o ativo? (ticker, emissor, título)<input type="text" id="c_asset" placeholder="ex: PETR4, NTN-B, Vale, LFT 2027"></label>
+   <button class="b" onclick="csvCart()" title="todas as posições embutidas, de todos os fundos">⬇ CSV (todas as posições)</button>
+   <span class="sub">${D.cart.length} fundos multimercado abertos · PL ≥ min · carteira de ${M.mes}${M.mes_ant?` (Δ vs ${M.mes_ant})`:''}. Só as maiores posições de cada fundo.</span></div>
+   <div id="c_assetres"></div>
+   <div class="split"><div class="list" id="c_list"></div><div id="c_det"></div></div>`;
+  ['c_a','c_q'].forEach(i=>$(i).oninput=renderCartList); $('c_asset').oninput=renderAsset;
+  renderCartList(); selCart(D.cart[0].id);
+}
+function renderCartList(){
+  const a=$('c_a').value, q=norm($('c_q').value);
+  const fs=D.cart.filter(f=>(!a||f.a===a)&&(!q||norm(f.n+f.id).includes(q))).slice(0,300);
+  $('c_list').innerHTML=fs.map(f=>`<div data-id="${f.id}" class="${state.cart.sel===f.id?'on':''}">${esc(f.n)}<small>${esc(f.a)} · PL R$ ${nf(f.pl,0)} mi</small></div>`).join('')||'<div>nenhum</div>';
+  $('c_list').onclick=e=>{const d=e.target.closest('div[data-id]'); if(d) selCart(d.dataset.id);};
+}
+function selCart(id){
+  const f=D.cart.find(x=>x.id===id); state.cart.sel=id; if(!f) return;
+  document.querySelectorAll('#c_list div').forEach(d=>d.classList.toggle('on',d.dataset.id===id));
+  const blocos=Object.keys(f.bl).sort((a,b)=>Math.abs(f.bl[b])-Math.abs(f.bl[a]));
+  const mx=Math.max(...blocos.map(b=>Math.abs(f.bl[b])),1);
+  $('c_det').innerHTML=`<h2>${esc(f.n)}</h2><div style="margin-bottom:8px"><span class="tag">${f.id}</span><span class="tag">${esc(f.a)}</span><span class="tag">PL R$ ${nf(f.pl,0)} mi</span><span class="tag">${f.np} posições</span></div>
+  <h2>Por tipo de aplicação (% do PL)</h2><table style="margin-bottom:14px"><thead><tr><th>Tipo</th><th class="n">% PL</th><th></th><th class="n">mês ant.</th><th class="n">Δ pp</th></tr></thead><tbody>${blocos.map(b=>{const v=f.bl[b],p=f.bl0[b],d=p==null?null:v-p;
+   return `<tr><td>${esc(b)}</td><td class="n">${nf(v,2)}%</td><td><span class="bar" style="width:${Math.abs(v)/mx*220}px;background:${v<0?'var(--neg)':'var(--acc)'}"></span></td><td class="n mut">${p==null?'–':nf(p,2)+'%'}</td><td class="n ${d==null?'':d>0?'pos':'neg'}">${d==null?'–':nf(d,2)}</td></tr>`;}).join('')}</tbody></table>
+  <h2>Maiores posições</h2><div class="scroll" style="max-height:480px"><table><thead><tr><th>Tipo</th><th>Ativo</th><th class="n">Valor (R$ mil)</th><th class="n">% PL</th><th class="n">Δ pp vs ant.</th></tr></thead><tbody>${f.top.map(t=>`<tr><td><span class="tag">${esc(t[0])}</span></td><td>${esc(t[1])}</td><td class="n">${nf(t[2],0)}</td><td class="n">${nf(t[3],2)}%</td><td class="n ${t[4]==null?'mut':t[4]>0?'pos':t[4]<0?'neg':''}">${t[4]==null?'novo':nf(t[4],2)}</td></tr>`).join('')}</tbody></table></div>`;
+}
+function renderAsset(){
+  const q=norm($('c_asset').value).split(/\s+/).filter(Boolean), out=$('c_assetres');
+  if(!q.length){out.innerHTML='';return;}
+  const hits=[]; D.cart.forEach(f=>f.top.forEach(t=>{const s=norm(t[0]+' '+t[1]); if(q.every(w=>s.includes(w))) hits.push({f,t});}));
+  hits.sort((a,b)=>b.t[2]-a.t[2]);
+  out.innerHTML=`<h2>Fundos com “${esc($('c_asset').value)}” entre as maiores posições <span class="sub">(${hits.length}; soma R$ ${nf(hits.reduce((a,h)=>a+h.t[2],0)/1e3,1)} mi)</span></h2><div class="scroll" style="max-height:300px;margin-bottom:14px"><table><thead><tr><th>Fundo</th><th>Ativo</th><th class="n">R$ mil</th><th class="n">% PL</th><th class="n">Δ pp</th></tr></thead><tbody>${hits.slice(0,200).map(h=>`<tr style="cursor:pointer" onclick="selCart('${h.f.id}')"><td>${esc(h.f.n)}</td><td>${esc(h.t[1])}</td><td class="n">${nf(h.t[2],0)}</td><td class="n">${nf(h.t[3],2)}%</td><td class="n ${h.t[4]==null?'mut':h.t[4]>0?'pos':h.t[4]<0?'neg':''}">${h.t[4]==null?'novo':nf(h.t[4],2)}</td></tr>`).join('')}</tbody></table></div>`;
+}
+let first='fr'; try{first=localStorage.getItem('pubtab')||'fr';}catch(e){} show(tabs.includes(first)?first:'fr');
+</script>
+</body>
+</html>
