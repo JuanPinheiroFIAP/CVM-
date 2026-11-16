@@ -153,7 +153,7 @@ def montar_carteiras(min_pl, topn):
     cl = cl.drop_duplicates("cnpj").set_index("cnpj")
     cda = ultimos_cda(2)
     if not cda:
-        return [], {}
+        return [], {}, {}
     (ym1, z1) = cda[0]
     pl1, pos1 = ler_cda(z1, ym1, set(cl.index))
     ym0 = None
@@ -188,7 +188,28 @@ def montar_carteiras(min_pl, topn):
                        "a": s(c.Classificacao_Anbima) or "Sem classificação", "pl": round(float(pl1[cnpj]) / 1e6, 1),
                        "np": int(len(g)), "bl": bl, "bl0": bl0, "top": top})
     fundos.sort(key=lambda f: -f["pl"])
-    return fundos, {"mes": ym1, "mes_ant": ym0}
+
+    # tabelas completas para exportação (todas as posições, não só as maiores)
+    def fmt(c):
+        d = c.zfill(14)
+        return f"{d[:2]}.{d[2:5]}.{d[5:8]}/{d[8:12]}-{d[12:]}"
+    expo = pos1.copy()
+    expo["pct_pl_anterior"] = [prev.get((r.cnpj, r.bl, r.ativo)) for r in expo.itertuples()]
+    expo["delta_pp"] = expo.pct - expo.pct_pl_anterior
+    expo.insert(0, "fundo", expo.cnpj.map(cl.Denominacao_Social))
+    expo.insert(1, "classe_anbima", expo.cnpj.map(cl.Classificacao_Anbima).fillna("Sem classificação"))
+    expo.insert(2, "pl_fundo", expo.cnpj.map(pl1))
+    expo["cnpj"] = expo.cnpj.map(fmt)
+    expo = expo.rename(columns={"bl": "tipo_aplicacao", "V": "valor_mercado", "Q": "quantidade", "pct": "pct_pl"})
+    expo["mes_carteira"] = pd.Timestamp(ym1 + "01")
+    tipos = blocos1.rename("pct_pl").reset_index().rename(columns={"bl": "tipo_aplicacao"})
+    if pos0 is not None:
+        tipos = tipos.merge(blocos0.rename("pct_pl_anterior").reset_index().rename(columns={"bl": "tipo_aplicacao"}), on=["cnpj", "tipo_aplicacao"], how="left")
+    tipos.insert(1, "fundo", tipos.cnpj.map(cl.Denominacao_Social))
+    tipos.insert(2, "classe_anbima", tipos.cnpj.map(cl.Classificacao_Anbima).fillna("Sem classificação"))
+    tipos["cnpj"] = tipos.cnpj.map(fmt)
+    tipos["mes_carteira"] = pd.Timestamp(ym1 + "01")
+    return fundos, {"mes": ym1, "mes_ant": ym0}, {"posicoes": expo, "tipos": tipos}
 
 
 def main():
@@ -206,20 +227,33 @@ def main():
     print(f"IPE: {len(ipe)} docs | FR {len(fr)} | Assembleias {len(ass)} | Recompras {len(rec)} | ate {ipe.Data_Entrega.max()}")
     ffr = ler_fundos_eventual(anos, desde)
     print("Fundos (FR/assembleias):", len(ffr))
-    cart, mcda = montar_carteiras(a.min_pl, a.top)
+    cart, mcda, tab_cart = montar_carteiras(a.min_pl, a.top)
     print("Carteiras:", len(cart), mcda)
 
-    # CSVs prontos para Excel / Power BI (pasta saidas/)
-    out = AQUI / "saidas"
-    out.mkdir(exist_ok=True)
-    cols_ipe = ["Data_Entrega", "Data_Referencia", "Empresa", "CNPJ", "Categoria", "Tipo", "Especie", "Assunto", "Link"]
-    for nome, linhas, cols in [("fatos_relevantes", fr, cols_ipe), ("recompras", rec, cols_ipe), ("assembleias", ass, cols_ipe),
-                               ("fundos_fr_assembleias", ffr, ["Recebido", "Competencia", "Fundo", "CNPJ", "Tipo", "Link"])]:
-        pd.DataFrame(linhas, columns=cols).to_csv(out / f"{nome}.csv", sep=";", index=False, encoding="utf-8-sig")
-    pd.DataFrame([[f["n"], f["id"], f["a"], f["pl"], *t] for f in cart for t in f["top"]],
-                 columns=["Fundo", "CNPJ", "ANBIMA", "PL_R$mi", "Tipo", "Ativo", "Valor_R$mil", "Pct_PL", "Delta_pp"]
-                 ).to_csv(out / "carteiras.csv", sep=";", index=False, encoding="utf-8-sig", decimal=",")
-    print("CSVs em", out)
+    # tabelas completas em CSV / Excel / Parquet (pasta exportacoes/)
+    import exportar as ex
+    print("exportando tabelas das publicações…")
+    cols_ipe = ["data_entrega", "data_referencia", "empresa", "cnpj", "categoria", "tipo", "especie", "assunto", "link"]
+
+    def tabela(linhas, cols, datas):
+        df = pd.DataFrame(linhas, columns=cols)
+        for c in datas:
+            df[c] = pd.to_datetime(df[c], errors="coerce")
+        return df
+    ex.salvar("publicacoes_fatos_relevantes", tabela(fr, cols_ipe, ["data_entrega", "data_referencia"]), "Fatos relevantes de companhias abertas (IPE), 12 meses, com link do documento.", "Publicações")
+    ex.salvar("publicacoes_recompras", tabela(rec, cols_ipe, ["data_entrega", "data_referencia"]), "Documentos de recompra de ações (detectados por palavras-chave no assunto).", "Publicações")
+    ex.salvar("publicacoes_assembleias", tabela(ass, cols_ipe, ["data_entrega", "data_referencia"]), "Assembleias de companhias abertas: editais, atas, propostas, boletins e mapas de votação.", "Publicações")
+    ex.salvar("publicacoes_fundos_fr_assembleias", tabela(ffr, ["data_recebimento", "competencia", "fundo", "cnpj", "tipo", "link"], ["data_recebimento", "competencia"]), "Fatos relevantes e documentos de assembleia de fundos (eventuais).", "Publicações")
+    ipe_todos = ipe.rename(columns={"Data_Entrega": "data_entrega", "Data_Referencia": "data_referencia", "Nome_Companhia": "empresa", "CNPJ_Companhia": "cnpj",
+                                    "Codigo_CVM": "codigo_cvm", "Categoria": "categoria", "Tipo": "tipo", "Especie": "especie", "Assunto": "assunto",
+                                    "Tipo_Apresentacao": "tipo_apresentacao", "Protocolo_Entrega": "protocolo", "Versao": "versao", "Link_Download": "link"})
+    ipe_todos = ipe_todos[["data_entrega", "data_referencia", "empresa", "cnpj", "codigo_cvm", "categoria", "tipo", "especie", "assunto", "tipo_apresentacao", "protocolo", "versao", "link"]].copy()
+    for c in ["data_entrega", "data_referencia"]:
+        ipe_todos[c] = pd.to_datetime(ipe_todos[c], errors="coerce")
+    ex.salvar("publicacoes_ipe_todas_categorias", ipe_todos, "TODAS as categorias do IPE (comunicados, avisos, reuniões, ofertas, proventos etc.), 12 meses.", "Publicações")
+    if tab_cart:
+        ex.salvar("carteiras_posicoes", tab_cart["posicoes"], "CDA: todas as posições dos fundos multimercado abertos (PL ≥ mínimo) no último mês, com variação vs. mês anterior.", "Carteiras")
+        ex.salvar("carteiras_tipos_aplicacao", tab_cart["tipos"], "CDA: % do PL por tipo de aplicação em cada fundo, mês atual vs. anterior.", "Carteiras")
 
     meta = {"gerado": dt.datetime.now().strftime("%d/%m/%Y %H:%M"), "desde": desde, "ate_ipe": ipe.Data_Entrega.max(), **mcda}
     payload = json.dumps({"meta": meta, "fr": fr, "ass": ass, "rec": rec, "ffr": ffr, "cart": cart},

@@ -38,9 +38,13 @@ let s=0;try{s=+localStorage.getItem('painel')||0}catch(e){}go(s);
 
 
 def juntar():
-    botoes = "".join(f'<button onclick="go({i})">{html.escape(n)}</button>' for i, (n, _) in enumerate(ABAS))
+    import exportar
+    pg = AQUI / "data" / "tmp" / "exportacoes.html"
+    pg.write_text(exportar.pagina_html(), encoding="utf-8")
+    abas = ABAS + [("Exportações", pg)]
+    botoes = "".join(f'<button onclick="go({i})">{html.escape(n)}</button>' for i, (n, _) in enumerate(abas))
     frames = "".join(f'<iframe title="{html.escape(n)}" srcdoc="{html.escape(p.read_text(encoding="utf-8"), quote=True)}"></iframe>'
-                     for n, p in ABAS)
+                     for n, p in abas)
     SAIDA.write_text(SHELL.replace("__BOTOES__", botoes).replace("__FRAMES__", frames), encoding="utf-8")
     print(f"ok -> {SAIDA} ({SAIDA.stat().st_size/1e6:.1f} MB)")
 

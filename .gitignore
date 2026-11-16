@@ -1,6 +1,7 @@
 # dados baixados da CVM e arquivos gerados (reproduzíveis com atualizar.bat)
 data/
 saidas/
+exportacoes/
 painel_cvm.html
 __pycache__/
 .claude/

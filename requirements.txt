@@ -1,0 +1,4 @@
+pandas
+numpy
+pyarrow>=15,<19
+xlsxwriter

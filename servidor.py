@@ -81,6 +81,14 @@ class H(BaseHTTPRequestHandler):
             if not f.exists():
                 return self._send(404, "painel_cvm.html não encontrado: rode atualizar.bat".encode())
             return self._send(200, f.read_bytes())
+        if u.path.startswith("/exportacoes/"):
+            nome = urllib.parse.unquote(u.path.split("/", 2)[2])
+            f = AQUI / "exportacoes" / nome
+            if not re.fullmatch(r"[\w\-.]+", nome) or not f.is_file():
+                return self._send(404, "arquivo não encontrado: rode atualizar.bat".encode())
+            ct = {"csv": "text/csv; charset=utf-8", "xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                  "parquet": "application/octet-stream"}.get(f.suffix.lstrip("."), "application/octet-stream")
+            return self._send(200, f.read_bytes(), ct, {"Content-Disposition": f'attachment; filename="{nome}"'})
         if u.path == "/doc":
             alvo = urllib.parse.parse_qs(u.query).get("u", [""])[0]
             p = urllib.parse.urlparse(alvo)
