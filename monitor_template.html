@@ -66,8 +66,9 @@ details summary{cursor:pointer;color:var(--mut)}
     <div class="seg" id="segView"><button data-v="g" class="on">Gestoras</button><button data-v="f">Fundos (detalhe)</button></div>
     <label>Janela<div class="seg" id="segWin"></div></label>
     <label>Medida<div class="seg" id="segMed"><button data-v="pct" class="on">% do PL inicial</button><button data-v="rs">R$ mi</button></div></label>
-    <label>Universo<div class="chk"><label><input type="checkbox" id="noex" checked> sem exclusivos</label>
-      <label><input type="checkbox" id="noprev"> sem previdência</label></div></label>
+    <label>Universo<div class="chk"><label><input type="checkbox" id="noex"> sem exclusivos</label>
+      <label><input type="checkbox" id="noprev"> sem previdência</label>
+      <label><input type="checkbox" id="nofic" checked title="Fundo de cotas (FIC): investe quase tudo no seu fundo master, que também é contado. Deixar marcado evita contar o mesmo PL duas vezes."> sem cotas (FIC)</label></div></label>
     <label>Classe ANBIMA<select id="fa"></select></label>
   </div>
   <details id="adv"><summary>Filtros avançados · peers por fundo</summary>
@@ -80,6 +81,7 @@ details summary{cursor:pointer;color:var(--mut)}
 </section>
 
 <div id="vF" style="display:none">
+<p class="sub" style="margin:0 0 10px">Visão auxiliar para comparar fundos entre gestoras e peers diretamente. O relatório é organizado por gestora — veja a aba <b>Gestoras</b>.</p>
 <section class="card"><div class="kpis" id="kpis"></div></section>
 
 <section class="card">
@@ -97,7 +99,7 @@ details summary{cursor:pointer;color:var(--mut)}
   <b>Peer mediana / média pond.</b> são calculadas entre os demais fundos do mesmo grupo (dimensões marcadas), excluindo o próprio fundo e aplicando o PL mínimo.
   <b>Spread</b> = fundo − mediana dos peers (em p.p.). <b>Percentil</b> = posição do fundo no grupo (100 = maior captação relativa).
   <b>z</b> = desvio robusto (mediana/MAD). Fundos com PL pequeno no início geram % extremos: ajuste o PL mínimo.
-  Um fundo de cotas (FIC) e seu master podem aparecer ambos, o que duplica o fluxo no agregado.
+  Um fundo de cotas (FIC) investe quase todo o PL no seu fundo master, que também entra na base — por isso o filtro <b>"sem cotas (FIC)"</b> (Universo, acima) vem marcado por padrão, evitando contar o mesmo PL/fluxo duas vezes na soma por gestora. Desmarque para ver os FICs individualmente.
   Classes com subclasses são consolidadas por CNPJ da classe.</p></details>
 </section>
 </div>
@@ -131,6 +133,7 @@ const M = DATA.meta, FUNDOS = DATA.fundos;
 const $ = id => document.getElementById(id);
 const nf = (x,d=1)=> x==null||!isFinite(x)?'–':x.toLocaleString('pt-BR',{minimumFractionDigits:d,maximumFractionDigits:d});
 const mi = x => x==null?'–':nf(x/1000,1);
+const bi = x => x==null||!isFinite(x)?'–':nf(x/1e6,2);
 const cls = x => x==null||!isFinite(x)||x===0?'':(x>0?'pos':'neg');
 const esc = s => String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const dbr = s => s? s.split('-').reverse().join('/') : '';
@@ -153,8 +156,8 @@ function rankPct(s,x){ // percentil (0-100) de x em s ordenado
   let up=lo; while(up<s.length && s[up]<=x) up++; return 100*((lo+up)/2)/s.length; }
 
 function filtrar(){
-  const minpl = +$('minpl').value*1000, noex=$('noex').checked, noprev=$('noprev').checked, fa=$('fa').value;
-  return FUNDOS.filter(f=>(!noex||!f.ex)&&(!noprev||!f.prev)&&(!fa||f.a===fa));
+  const minpl = +$('minpl').value*1000, noex=$('noex').checked, noprev=$('noprev').checked, nofic=$('nofic').checked, fa=$('fa').value;
+  return FUNDOS.filter(f=>(!noex||!f.ex)&&(!noprev||!f.prev)&&(!nofic||f.fc!=='S')&&(!fa||f.a===fa));
 }
 const gkey = f => [...st.dims].map(d=>f[d]).join(' | ');
 function valor(f,w){ // valor da medida selecionada na janela w
@@ -201,7 +204,7 @@ function build(){
   $('dims').innerHTML=DIMS.map(([k,n])=>`<label><input type="checkbox" data-k="${k}" ${st.dims.has(k)?'checked':''}> ${n}</label>`).join('');
   $('dims').onchange=e=>{const k=e.target.dataset.k; e.target.checked?st.dims.add(k):st.dims.delete(k); st.page=0; render();};
   $('fa').innerHTML='<option value="">Todas</option>'+classes.map(c=>`<option>${esc(c)}</option>`).join('');
-  ['minpl','minpeers','noex','noprev','fa'].forEach(id=>$(id).onchange=()=>{st.page=0;render();});
+  ['minpl','minpeers','noex','noprev','nofic','fa'].forEach(id=>$(id).onchange=()=>{st.page=0;render();});
   $('q').oninput=()=>{st.page=0;renderTable();};
   $('prev').onclick=()=>{st.page=Math.max(0,st.page-1);renderTable();};
   $('next').onclick=()=>{st.page++;renderTable();};
@@ -249,9 +252,8 @@ function renderCats(){
 }
 
 const COLS=[['n','Fundo (classe)',r=>r.f.n,'l'],['g','Gestor',r=>r.f.g,'l'],['a','ANBIMA',r=>r.f.a,'l'],['pa','Público',r=>r.f.pa,'l'],
- ['pl','PL (R$ mi)',r=>r.f.pl],['F','Capt. líq. (R$ mi)',r=>r.f.F[st.w]],['v',null,r=>r.v],['pmed','Peer mediana',r=>r.peer&&r.peer.med],
- ['pavg','Peer méd. pond.',r=>r.peer&&r.peer.wavg],['spread','Spread (pp)',r=>r.peer&&r.peer.spread],['pctl','Percentil',r=>r.peer&&r.peer.pctl],
- ['z','z',r=>r.peer&&r.peer.z],['pn','Nº peers',r=>r.peer&&r.peer.n],['dc','Δ cotistas',r=>r.f.DC[st.w]],['rt','Rentab.',r=>r.f.RT[st.w]]];
+ ['pl','PL (R$ bi)',r=>r.f.pl],['F','Capt. líq. (R$ mi)',r=>r.f.F[st.w]],['v',null,r=>r.v],['pmed','Peer mediana',r=>r.peer&&r.peer.med],
+ ['spread','Spread (pp)',r=>r.peer&&r.peer.spread],['pctl','Percentil',r=>r.peer&&r.peer.pctl],['dc','Δ cotistas',r=>r.f.DC[st.w]],['rt','Rentab.',r=>r.f.RT[st.w]]];
 
 function renderTable(){
   const q=$('q').value.trim().toLowerCase();
@@ -267,9 +269,9 @@ function renderTable(){
   $('tbl').innerHTML='<thead><tr>'+COLS.map(c=>`<th data-s="${c[0]}" class="${c[3]||''}">${c[1]||vlabel}${st.sort===c[0]?(st.dir>0?' ▲':' ▼'):''}</th>`).join('')+'</tr></thead><tbody>'+
    slice.map(r=>{const p=r.peer, f=r.f;
     return `<tr data-id="${f.id}"><td class="l" title="${esc(f.n)} · ${f.id}">${esc(f.n)}</td><td class="l" title="${esc(f.ad)}">${esc(f.g)}</td><td class="l">${esc(f.a)}</td><td class="l">${esc(f.pa)}</td>
-    <td>${mi(f.pl)}</td><td class="${cls(f.F[st.w])}">${mi(f.F[st.w])}</td><td class="${cls(r.v)}"><b>${fmtV(r.v)}</b></td>
-    <td>${p?fmtV(p.med):'–'}</td><td>${p?fmtV(p.wavg):'–'}</td><td class="${p?cls(p.spread):''}">${p?(st.med==='pct'?nf(p.spread,2):mi(p.spread)):'–'}</td>
-    <td>${p?nf(p.pctl,0):'–'}</td><td>${p&&p.z!=null?nf(p.z,1):'–'}</td><td>${p?p.n:'–'}</td><td class="${cls(f.DC[st.w])}">${f.DC[st.w]==null?'–':f.DC[st.w].toLocaleString('pt-BR')}</td><td class="${cls(f.RT[st.w])}">${f.RT[st.w]==null?'–':nf(f.RT[st.w],2)+'%'}</td></tr>`;}).join('')+'</tbody>';
+    <td>${bi(f.pl)}</td><td class="${cls(f.F[st.w])}">${mi(f.F[st.w])}</td><td class="${cls(r.v)}"><b>${fmtV(r.v)}</b></td>
+    <td>${p?fmtV(p.med):'–'}</td><td class="${p?cls(p.spread):''}">${p?(st.med==='pct'?nf(p.spread,2):mi(p.spread)):'–'}</td>
+    <td>${p?nf(p.pctl,0):'–'}</td><td class="${cls(f.DC[st.w])}">${f.DC[st.w]==null?'–':f.DC[st.w].toLocaleString('pt-BR')}</td><td class="${cls(f.RT[st.w])}">${f.RT[st.w]==null?'–':nf(f.RT[st.w],2)+'%'}</td></tr>`;}).join('')+'</tbody>';
   $('tbl').querySelector('thead').onclick=e=>{const th=e.target.closest('th'); if(!th) return; const s=th.dataset.s; if(st.sort===s) st.dir*=-1; else {st.sort=s; st.dir=-1;} renderTable();};
   $('tbl').querySelector('tbody').onclick=e=>{const tr=e.target.closest('tr'); if(tr) detalhe(tr.dataset.id);};
   $('pg').textContent=`${rows.length.toLocaleString('pt-BR')} fundos · página ${st.page+1}/${pages}`;
@@ -313,7 +315,7 @@ function detalhe(id){
 
   $('mbox').innerHTML=`<button class="x" onclick="document.getElementById('modal').style.display='none'">fechar ✕</button>
   <h2 style="font-size:17px">${esc(f.n)}</h2>
-  <div style="margin-bottom:10px"><span class="tag">${f.id}</span><span class="tag">${esc(f.a)}</span><span class="tag">${esc(f.pa)}</span><span class="tag">${esc(f.co)}</span>${f.ex?'<span class="tag">Exclusivo</span>':''}<span class="tag">Gestor: ${esc(f.g)}</span><span class="tag">Adm: ${esc(f.ad)}</span><span class="tag">PL R$ ${mi(f.pl)} mi</span><span class="tag">${(f.nc||0).toLocaleString('pt-BR')} cotistas</span><span class="tag">${peers.length} peers (${[...st.dims].map(d=>DIMS.find(x=>x[0]===d)[1]).join(' × ')||'universo'})</span></div>
+  <div style="margin-bottom:10px"><span class="tag">${f.id}</span><span class="tag">${esc(f.a)}</span><span class="tag">${esc(f.pa)}</span><span class="tag">${esc(f.co)}</span>${f.ex?'<span class="tag">Exclusivo</span>':''}<span class="tag">Gestor: ${esc(f.g)}</span><span class="tag">Adm: ${esc(f.ad)}</span><span class="tag">PL R$ ${bi(f.pl)} bi</span><span class="tag">${(f.nc||0).toLocaleString('pt-BR')} cotistas</span><span class="tag">${peers.length} peers (${[...st.dims].map(d=>DIMS.find(x=>x[0]===d)[1]).join(' × ')||'universo'})</span></div>
   <div class="grid2">
     <div class="card"><h2>Captação líquida mensal (% PL) vs mediana peers</h2>${barChart(M.meses,mv,mp)}<div class="legend"><span><i style="background:var(--acc)"></i>Fundo</span><span><i style="background:var(--peer)"></i>Mediana peers</span></div></div>
     <div class="card"><h2>Captação líquida acumulada, 63 pregões (% PL)</h2>${lineChart(M.datas_diarias,fc,pm)}<div class="legend"><span><i style="background:var(--acc)"></i>Fundo</span><span><i style="background:var(--peer)"></i>Mediana peers</span></div></div>
@@ -321,8 +323,8 @@ function detalhe(id){
   <div class="card"><h2>Todas as janelas</h2><div class="scroll" style="max-height:none"><table><thead><tr><th>Janela</th><th>Capt. bruta (mi)</th><th>Resgates (mi)</th><th>Líquida (mi)</th><th>% PL</th><th>Peer mediana</th><th>Peer méd. pond.</th><th>Spread (pp)</th><th>Percentil</th><th>Peers</th><th>Δ cotistas</th><th>Rentab.</th><th>Rent. peers (med.)</th></tr></thead><tbody>
   ${jrows.map(r=>`<tr><td>${r.j}</td><td>${mi(r.c)}</td><td>${mi(r.r)}</td><td class="${cls(r.f)}">${mi(r.f)}</td><td class="${cls(r.v)}"><b>${r.v==null?'–':nf(r.v,2)+'%'}</b></td><td>${r.med==null?'–':nf(r.med,2)+'%'}</td><td>${r.wavg==null?'–':nf(r.wavg,2)+'%'}</td><td class="${r.med!=null&&r.v!=null?cls(r.v-r.med):''}">${r.med!=null&&r.v!=null?nf(r.v-r.med,2):'–'}</td><td>${r.pctl==null?'–':nf(r.pctl,0)}</td><td>${r.n}</td><td class="${cls(r.dc)}">${r.dc==null?'–':r.dc.toLocaleString('pt-BR')}</td><td class="${cls(r.rt)}">${r.rt==null?'–':nf(r.rt,2)+'%'}</td><td>${r.prt==null?'–':nf(r.prt,2)+'%'}</td></tr>`).join('')}
   </tbody></table></div></div>
-  <div class="card"><h2>Maiores peers (janela ${M.janelas[st.w]})</h2><div class="scroll" style="max-height:320px"><table><thead><tr><th class="l">Fundo</th><th class="l">Gestor</th><th>PL (mi)</th><th>Capt. líq. (mi)</th><th>% PL</th></tr></thead><tbody>
-  ${top.map(g=>`<tr data-id="${g.id}" onclick="detalhe('${g.id}')"><td class="l">${esc(g.n)}</td><td class="l">${esc(g.g)}</td><td>${mi(g.pl)}</td><td class="${cls(g.F[st.w])}">${mi(g.F[st.w])}</td><td class="${cls(g.F[st.w])}">${nf(g.F[st.w]/g.P0[st.w]*100,2)}%</td></tr>`).join('')}
+  <div class="card"><h2>Maiores peers (janela ${M.janelas[st.w]})</h2><div class="scroll" style="max-height:320px"><table><thead><tr><th class="l">Fundo</th><th class="l">Gestor</th><th>PL (bi)</th><th>Capt. líq. (mi)</th><th>% PL</th></tr></thead><tbody>
+  ${top.map(g=>`<tr data-id="${g.id}" onclick="detalhe('${g.id}')"><td class="l">${esc(g.n)}</td><td class="l">${esc(g.g)}</td><td>${bi(g.pl)}</td><td class="${cls(g.F[st.w])}">${mi(g.F[st.w])}</td><td class="${cls(g.F[st.w])}">${nf(g.F[st.w]/g.P0[st.w]*100,2)}%</td></tr>`).join('')}
   </tbody></table></div></div>`;
   $('modal').style.display='flex'; $('modal').scrollTop=0;
 }
@@ -401,15 +403,14 @@ function computeG(){
 }
 
 // ---- tabela de ranking (reutilizada na lista de acompanhadas)
-const gcols=()=>[['★','star'],['Gestora','g'],['Fundos','nf'],['PL (R$ mi)','pl'],['Share PL','share'],
-  ...M.janelas.map((j,i)=>['Capt. líq. '+j,'F'+i]),['% PL','pct'],['Spread vs mediana (pp)','spr'],['Rank % PL','rp'],['Rank R$','rf'],['% fundos c/ capt.','pe'],['Δ cotistas','dc']];
+const gcols=()=>[['★','star'],['Gestora','g'],['PL (R$ bi)','pl'],['Capt. líq. '+M.janelas[st.w]+' (R$ mi)','F'+st.w],['% PL','pct'],['Spread vs mediana (pp)','spr'],['Rank % PL','rp']];
 const heat=(v,cap)=>{if(v==null||!isFinite(v)||v===0) return 'transparent'; const a=Math.min(Math.abs(v)/cap,1)*.34; return v>0?`rgba(16,160,110,${a.toFixed(2)})`:`rgba(224,56,44,${a.toFixed(2)})`;};
 const gval=(r,k)=>k==='g'?r.g:/^F\d$/.test(k)?r.W[+k[1]].F:k==='star'?(st.watch.has(r.g)?0:1):r[k];
 function gcell(r,k){
   if(k==='star'){const on=st.watch.has(r.g); return `<td data-star="${enc(r.g)}" style="cursor:pointer;color:${on?'var(--acc)':'var(--mut)'};text-align:center" title="acompanhar">${on?'★':'☆'}</td>`;}
   if(k==='g') return `<td class="l" title="${esc(r.g)}">${esc(r.g)}</td>`;
   if(/^F\d$/.test(k)){const i=+k[1], v=r.W[i].F; return `<td class="${cls(v)}" style="background:${heat(v,(st.caps||[])[i]||1)};${i===st.w?'font-weight:700':''}">${mi(v)}</td>`;}
-  if(k==='nf') return `<td>${r.nf}</td>`; if(k==='pl') return `<td>${mi(r.pl)}</td>`; if(k==='share') return `<td>${nf(r.share,2)}%</td>`;
+  if(k==='nf') return `<td>${r.nf}</td>`; if(k==='pl') return `<td>${bi(r.pl)}</td>`; if(k==='share') return `<td>${nf(r.share,2)}%</td>`;
   if(k==='pct') return `<td class="${cls(r.pct)}" style="background:${heat(r.pct,st.cpct||1)}"><b>${r.pct==null?'–':nf(r.pct,2)+'%'}</b></td>`;
   if(k==='spr') return `<td class="${cls(r.spr)}">${r.spr==null?'–':nf(r.spr,2)}</td>`;
   if(k==='pe') return `<td>${r.pe==null?'–':nf(r.pe,0)+'%'}</td>`;
@@ -472,6 +473,20 @@ function barSingle(labels,vals,fx){
   return s+'</svg>';
 }
 
+function plComposicao(fs,totalPl){
+  if(!totalPl) return '<p class="sub">Sem PL para compor.</p>';
+  const ord=[...fs].filter(f=>f.pl>0).sort((a,b)=>b.pl-a.pl);
+  const top=ord.slice(0,10), resto=ord.slice(10), restoPl=resto.reduce((s,f)=>s+f.pl,0);
+  const linhas=top.map(f=>({n:f.n,pl:f.pl}));
+  if(resto.length) linhas.push({n:`Outros ${resto.length} fundo${resto.length>1?'s':''}`,pl:restoPl});
+  const max=linhas.length?linhas[0].pl:1;
+  return linhas.map(l=>`<div style="display:flex;align-items:center;gap:8px;margin:4px 0">
+    <div style="flex:0 0 280px;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(l.n)}">${esc(l.n)}</div>
+    <div style="flex:1;background:var(--chip);border-radius:4px;height:14px"><div style="width:${Math.max(l.pl/max*100,1.5)}%;background:var(--acc);height:100%;border-radius:4px"></div></div>
+    <div style="flex:0 0 64px;text-align:right;font-size:12px"><b>${nf(l.pl/totalPl*100,1)}%</b></div>
+    <div style="flex:0 0 90px;text-align:right;font-size:11px;color:var(--mut)">R$ ${bi(l.pl)} bi</div>
+  </div>`).join('');
+}
 function detalheGest(g,rows,gmin){
   const w=st.w, me=GAG.get(g), fs=me.fs, mk=marketTotals(), minpl=+$('minpl').value*1000, jn=M.janelas[w];
   const elig=rows.filter(r=>r.pl>=gmin&&r.pct!=null);
@@ -534,6 +549,7 @@ function detalheGest(g,rows,gmin){
    <div class="kpi"><span>Captação bruta / Resgate</span><b>${mi(a.C)} / ${mi(a.R)}</b><span>R$ mi</span></div>
    <div class="kpi"><span>Δ cotistas</span><b class="${cls(a.dc)}">${a.dc.toLocaleString('pt-BR')}</b><span>na janela</span></div>
   </div>
+  <div class="card"><h2>Composição do PL por fundo <span class="sub">quanto do PL da gestora está em cada fundo</span></h2>${plComposicao(fs,me.pl)}</div>
   <div class="card" style="background:var(--bg)"><h2>Insights</h2><ul style="margin:0;padding-left:18px">${ins.map(i=>`<li style="margin:3px 0">${i}</li>`).join('')}</ul></div>
   </div><div class="gp" data-t="ev"><div class="card"><h2>Captação líquida por mês</h2><div class="scroll" style="max-height:none"><table><thead><tr><th class="l"></th>${M.meses.map(m=>`<th>${fm(m)}</th>`).join('')}</tr></thead><tbody>
    <tr><td class="l">Gestora (R$ mi)</td>${gM.map(x=>`<td class="${cls(x.F)}">${mi(x.F)}</td>`).join('')}</tr>
@@ -551,13 +567,13 @@ function detalheGest(g,rows,gmin){
   </div><div class="gp" data-t="jan"><div class="card"><h2>Todas as janelas</h2><div class="scroll" style="max-height:none"><table><thead><tr><th>Janela</th><th class="n">Capt. bruta (R$ mi)</th><th class="n">Resgates (R$ mi)</th><th class="n">Capt. líq. (R$ mi)</th><th class="n">% PL</th><th class="n">Demais gestoras</th><th class="n">Mediana gestoras</th><th class="n">Porte similar (med.)</th><th class="n">Spread vs demais (pp)</th><th class="n">Ranking % PL</th><th class="n">Rent. mediana fundos</th></tr></thead><tbody>
   ${jr.map((r,i)=>`<tr ${i===w?'style="background:var(--sel)"':''}><td>${r.j}</td><td>${mi(r.a.C)}</td><td>${mi(r.a.R)}</td><td class="${cls(r.a.F)}">${mi(r.a.F)}</td><td class="${cls(r.a.pct)}"><b>${r.a.pct==null?'–':nf(r.a.pct,2)+'%'}</b></td><td>${r.mkt==null?'–':nf(r.mkt,2)+'%'}</td><td>${r.med==null?'–':nf(r.med,2)+'%'}</td><td>${r.sim==null?'–':nf(r.sim,2)+'%'}</td><td class="${r.mkt!=null&&r.a.pct!=null?cls(r.a.pct-r.mkt):''}">${r.mkt!=null&&r.a.pct!=null?nf(r.a.pct-r.mkt,2):'–'}</td><td>${r.rk.pos?'#'+r.rk.pos+'/'+r.rk.n:'–'}</td><td>${r.rt==null?'–':nf(r.rt,2)+'%'}</td></tr>`).join('')}
   </tbody></table></div></div>
-  <div class="card"><h2>Mix por classe ANBIMA vs mercado (${jn})</h2><div class="scroll" style="max-height:none"><table><thead><tr><th class="l">Classe</th><th>Fundos</th><th>PL (R$ mi)</th><th>Capt. líq. (R$ mi)</th><th>% PL gestora</th><th>% PL demais</th><th>Dif. (pp)</th></tr></thead><tbody>
-  ${clsRows.map(r=>`<tr><td class="l">${esc(r.c)}</td><td>${r.x.nf}</td><td>${mi(r.x.pl)}</td><td class="${cls(r.x.F)}">${mi(r.x.F)}</td><td class="${cls(r.x.pct)}">${r.x.pct==null?'–':nf(r.x.pct,2)+'%'}</td><td>${r.y.pct==null?'–':nf(r.y.pct,2)+'%'}</td><td class="${cls(r.dif)}">${r.dif==null?'–':nf(r.dif,2)}</td></tr>`).join('')}
+  <div class="card"><h2>Mix por classe ANBIMA vs mercado (${jn})</h2><div class="scroll" style="max-height:none"><table><thead><tr><th class="l">Classe</th><th>Fundos</th><th>PL (R$ bi)</th><th>Capt. líq. (R$ mi)</th><th>% PL gestora</th><th>% PL demais</th><th>Dif. (pp)</th></tr></thead><tbody>
+  ${clsRows.map(r=>`<tr><td class="l">${esc(r.c)}</td><td>${r.x.nf}</td><td>${bi(r.x.pl)}</td><td class="${cls(r.x.F)}">${mi(r.x.F)}</td><td class="${cls(r.x.pct)}">${r.x.pct==null?'–':nf(r.x.pct,2)+'%'}</td><td>${r.y.pct==null?'–':nf(r.y.pct,2)+'%'}</td><td class="${cls(r.dif)}">${r.dif==null?'–':nf(r.dif,2)}</td></tr>`).join('')}
   </tbody></table></div></div>
-  </div><div class="gp" data-t="fun"><div class="card"><h2>Fundos da gestora: captação líquida por janela (R$ mi) <span class="sub">peers do fundo: ${[...st.dims].map(d=>DIMS.find(x=>x[0]===d)[1]).join(' × ')||'universo'}</span></h2><div class="scroll"><table><thead><tr><th class="l">Fundo</th><th class="l">ANBIMA</th><th class="l">Público</th><th>PL (R$ mi)</th>${M.janelas.map((j,i)=>`<th ${i===w?'style="background:var(--sel)"':''}>Capt. ${j}</th>`).join('')}<th>% PL (${jn})</th><th>Peer mediana</th><th>Spread (pp)</th><th>Percentil</th><th>Δ cotistas</th><th>Rentab.</th></tr></thead><tbody>
-  <tr style="font-weight:700;background:var(--chip)"><td class="l">TOTAL DA GESTORA</td><td class="l"></td><td class="l"></td><td>${mi(me.pl)}</td>${me.W.map((x,i)=>`<td class="${cls(x.F)}">${mi(x.F)}</td>`).join('')}<td class="${cls(a.pct)}">${a.pct==null?'–':nf(a.pct,2)+'%'}</td><td></td><td></td><td></td><td class="${cls(a.dc)}">${a.dc.toLocaleString('pt-BR')}</td><td></td></tr>
+  </div><div class="gp" data-t="fun"><div class="card"><h2>Fundos da gestora <span class="sub">peers do fundo: ${[...st.dims].map(d=>DIMS.find(x=>x[0]===d)[1]).join(' × ')||'universo'}</span></h2><div class="scroll"><table><thead><tr><th class="l">Fundo</th><th class="l">ANBIMA</th><th class="l">Público</th><th>PL (R$ bi)</th><th>% PL gestora</th><th>Capt. líq. ${jn} (R$ mi)</th><th>% PL (${jn})</th><th>Peer mediana</th><th>Spread (pp)</th><th>Percentil</th><th>Δ cotistas</th><th>Rentab.</th></tr></thead><tbody>
+  <tr style="font-weight:700;background:var(--chip)"><td class="l">TOTAL DA GESTORA</td><td class="l"></td><td class="l"></td><td>${bi(me.pl)}</td><td>100,0%</td><td class="${cls(a.F)}">${mi(a.F)}</td><td class="${cls(a.pct)}">${a.pct==null?'–':nf(a.pct,2)+'%'}</td><td></td><td></td><td></td><td class="${cls(a.dc)}">${a.dc.toLocaleString('pt-BR')}</td><td></td></tr>
   ${frows.map(r=>{const f=r.f,p=r.peer; const v=r.v!=null?r.v:(f.P0[w]>0&&f.F[w]!=null?(st.med==='pct'?f.F[w]/f.P0[w]*100:f.F[w]):null);
-   return `<tr style="cursor:pointer" onclick="detalhe('${f.id}')"><td class="l" title="${esc(f.n)}">${esc(f.n)}</td><td class="l">${esc(f.a)}</td><td class="l">${esc(f.pa)}</td><td>${mi(f.pl)}</td>${f.F.map((x,i)=>`<td class="${cls(x)}" ${i===w?'style="background:var(--sel)"':''}>${mi(x)}</td>`).join('')}<td class="${cls(v)}"><b>${fmtV(v)}</b></td><td>${p?fmtV(p.med):'–'}</td><td class="${p?cls(p.spread):''}">${p?(st.med==='pct'?nf(p.spread,2):mi(p.spread)):'–'}</td><td>${p?nf(p.pctl,0):'–'}</td><td class="${cls(f.DC[w])}">${f.DC[w]==null?'–':f.DC[w].toLocaleString('pt-BR')}</td><td class="${cls(f.RT[w])}">${f.RT[w]==null?'–':nf(f.RT[w],2)+'%'}</td></tr>`;}).join('')}
+   return `<tr style="cursor:pointer" onclick="detalhe('${f.id}')"><td class="l" title="${esc(f.n)}">${esc(f.n)}</td><td class="l">${esc(f.a)}</td><td class="l">${esc(f.pa)}</td><td>${bi(f.pl)}</td><td><b>${nf(me.pl>0?f.pl/me.pl*100:0,1)}%</b></td><td class="${cls(f.F[w])}">${mi(f.F[w])}</td><td class="${cls(v)}"><b>${fmtV(v)}</b></td><td>${p?fmtV(p.med):'–'}</td><td class="${p?cls(p.spread):''}">${p?(st.med==='pct'?nf(p.spread,2):mi(p.spread)):'–'}</td><td>${p?nf(p.pctl,0):'–'}</td><td class="${cls(f.DC[w])}">${f.DC[w]==null?'–':f.DC[w].toLocaleString('pt-BR')}</td><td class="${cls(f.RT[w])}">${f.RT[w]==null?'–':nf(f.RT[w],2)+'%'}</td></tr>`;}).join('')}
   </tbody></table></div></div></div>`;
   gtabApply();
 }

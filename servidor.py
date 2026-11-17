@@ -82,12 +82,19 @@ class H(BaseHTTPRequestHandler):
                 return self._send(404, "painel_cvm.html não encontrado: rode atualizar.bat".encode())
             return self._send(200, f.read_bytes())
         if u.path.startswith("/exportacoes/"):
-            nome = urllib.parse.unquote(u.path.split("/", 2)[2])
-            f = AQUI / "exportacoes" / nome
-            if not re.fullmatch(r"[\w\-.]+", nome) or not f.is_file():
+            rel = urllib.parse.unquote(u.path[len("/exportacoes/"):])
+            partes = rel.split("/")
+            if not partes or any(not re.fullmatch(r"[\w\-.]+", p) or p in (".", "..") for p in partes):
+                return self._send(400, "caminho inválido".encode())
+            f = AQUI / "exportacoes"
+            for p in partes:
+                f = f / p
+            if not f.is_file():
                 return self._send(404, "arquivo não encontrado: rode atualizar.bat".encode())
+            nome = partes[-1]
             ct = {"csv": "text/csv; charset=utf-8", "xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                  "parquet": "application/octet-stream"}.get(f.suffix.lstrip("."), "application/octet-stream")
+                  "parquet": "application/octet-stream", "json": "application/json", "md": "text/markdown; charset=utf-8"}.get(
+                f.suffix.lstrip("."), "application/octet-stream")
             return self._send(200, f.read_bytes(), ct, {"Content-Disposition": f'attachment; filename="{nome}"'})
         if u.path == "/doc":
             alvo = urllib.parse.parse_qs(u.query).get("u", [""])[0]

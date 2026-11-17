@@ -6,6 +6,7 @@ Uso:
 """
 import argparse
 import html
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -41,6 +42,10 @@ def juntar():
     import exportar
     pg = AQUI / "data" / "tmp" / "exportacoes.html"
     pg.write_text(exportar.pagina_html(), encoding="utf-8")
+    leiame = AQUI / "EXPORTACOES.md"
+    if leiame.exists():
+        (AQUI / "exportacoes").mkdir(exist_ok=True)
+        shutil.copy(leiame, AQUI / "exportacoes" / "README.md")
     abas = ABAS + [("Exportações", pg)]
     botoes = "".join(f'<button onclick="go({i})">{html.escape(n)}</button>' for i, (n, _) in enumerate(abas))
     frames = "".join(f'<iframe title="{html.escape(n)}" srcdoc="{html.escape(p.read_text(encoding="utf-8"), quote=True)}"></iframe>'

@@ -240,20 +240,20 @@ def main():
         for c in datas:
             df[c] = pd.to_datetime(df[c], errors="coerce")
         return df
-    ex.salvar("publicacoes_fatos_relevantes", tabela(fr, cols_ipe, ["data_entrega", "data_referencia"]), "Fatos relevantes de companhias abertas (IPE), 12 meses, com link do documento.", "Publicações")
-    ex.salvar("publicacoes_recompras", tabela(rec, cols_ipe, ["data_entrega", "data_referencia"]), "Documentos de recompra de ações (detectados por palavras-chave no assunto).", "Publicações")
-    ex.salvar("publicacoes_assembleias", tabela(ass, cols_ipe, ["data_entrega", "data_referencia"]), "Assembleias de companhias abertas: editais, atas, propostas, boletins e mapas de votação.", "Publicações")
-    ex.salvar("publicacoes_fundos_fr_assembleias", tabela(ffr, ["data_recebimento", "competencia", "fundo", "cnpj", "tipo", "link"], ["data_recebimento", "competencia"]), "Fatos relevantes e documentos de assembleia de fundos (eventuais).", "Publicações")
+    ex.salvar("publicacoes_fatos_relevantes", tabela(fr, cols_ipe, ["data_entrega", "data_referencia"]), "Fatos relevantes de companhias abertas (IPE), 12 meses, com link do documento.", "Publicações", pasta="publicacoes")
+    ex.salvar("publicacoes_recompras", tabela(rec, cols_ipe, ["data_entrega", "data_referencia"]), "Documentos de recompra de ações (detectados por palavras-chave no assunto).", "Publicações", pasta="publicacoes")
+    ex.salvar("publicacoes_assembleias", tabela(ass, cols_ipe, ["data_entrega", "data_referencia"]), "Assembleias de companhias abertas: editais, atas, propostas, boletins e mapas de votação.", "Publicações", pasta="publicacoes")
+    ex.salvar("publicacoes_fundos_fr_assembleias", tabela(ffr, ["data_recebimento", "competencia", "fundo", "cnpj", "tipo", "link"], ["data_recebimento", "competencia"]), "Fatos relevantes e documentos de assembleia de fundos (eventuais).", "Publicações", pasta="publicacoes")
     ipe_todos = ipe.rename(columns={"Data_Entrega": "data_entrega", "Data_Referencia": "data_referencia", "Nome_Companhia": "empresa", "CNPJ_Companhia": "cnpj",
                                     "Codigo_CVM": "codigo_cvm", "Categoria": "categoria", "Tipo": "tipo", "Especie": "especie", "Assunto": "assunto",
                                     "Tipo_Apresentacao": "tipo_apresentacao", "Protocolo_Entrega": "protocolo", "Versao": "versao", "Link_Download": "link"})
     ipe_todos = ipe_todos[["data_entrega", "data_referencia", "empresa", "cnpj", "codigo_cvm", "categoria", "tipo", "especie", "assunto", "tipo_apresentacao", "protocolo", "versao", "link"]].copy()
     for c in ["data_entrega", "data_referencia"]:
         ipe_todos[c] = pd.to_datetime(ipe_todos[c], errors="coerce")
-    ex.salvar("publicacoes_ipe_todas_categorias", ipe_todos, "TODAS as categorias do IPE (comunicados, avisos, reuniões, ofertas, proventos etc.), 12 meses.", "Publicações")
+    ex.salvar("publicacoes_ipe_todas_categorias", ipe_todos, "TODAS as categorias do IPE (comunicados, avisos, reuniões, ofertas, proventos etc.), 12 meses.", "Publicações", pasta="publicacoes")
     if tab_cart:
-        ex.salvar("carteiras_posicoes", tab_cart["posicoes"], "CDA: todas as posições dos fundos multimercado abertos (PL ≥ mínimo) no último mês, com variação vs. mês anterior.", "Carteiras")
-        ex.salvar("carteiras_tipos_aplicacao", tab_cart["tipos"], "CDA: % do PL por tipo de aplicação em cada fundo, mês atual vs. anterior.", "Carteiras")
+        ex.salvar("carteiras_posicoes", tab_cart["posicoes"], "CDA: todas as posições dos fundos multimercado abertos (PL ≥ mínimo) no último mês, com variação vs. mês anterior.", "Carteiras", pasta="carteiras")
+        ex.salvar("carteiras_tipos_aplicacao", tab_cart["tipos"], "CDA: % do PL por tipo de aplicação em cada fundo, mês atual vs. anterior.", "Carteiras", pasta="carteiras")
 
     meta = {"gerado": dt.datetime.now().strftime("%d/%m/%Y %H:%M"), "desde": desde, "ate_ipe": ipe.Data_Entrega.max(), **mcda}
     payload = json.dumps({"meta": meta, "fr": fr, "ass": ass, "rec": rec, "ffr": ffr, "cart": cart},

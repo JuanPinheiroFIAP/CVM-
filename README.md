@@ -23,6 +23,8 @@ Os dados baixados (`data/`), os CSVs (`saidas/`) e o `painel_cvm.html` são gera
 Todas as tabelas do painel saem completas (sem filtros da tela) em **CSV, Excel e Parquet**, na pasta `exportacoes/` e na aba **Exportações** do painel:
 
 - captação por fundo e por gestora (janelas, mensal, diária, por classe ANBIMA);
+- `captacao_gestoras_fundos`: base única, uma linha por fundo, com os indicadores do fundo ao lado dos da sua gestora (PL, captação, ranking) e o % do PL da gestora que está em cada fundo — pensada para alimentar outros relatórios;
+- fundo de cotas (FIC) investe quase todo o PL no seu fundo master, que também entra na base — somar os dois na gestora duplicaria o PL/fluxo. Por isso as tabelas de gestora têm a opção de universo `sem_cotas` (exclui FICs; é o que o painel e a `captacao_gestoras_fundos` usam por padrão), além de `todos` e `sem_exclusivos`. O campo `fundo_de_cotas` identifica os FICs linha a linha;
 - publicações (fatos relevantes, recompras, assembleias, fundos, todas as categorias do IPE);
 - carteiras (todas as posições e % por tipo de aplicação).
 
