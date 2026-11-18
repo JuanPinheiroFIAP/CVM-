@@ -26,6 +26,7 @@ Cada tabela sai em três arquivos equivalentes:
 exportacoes/
   catalogo.json             # manifesto: toda tabela, com descrição, grupo, linhas, colunas e caminho
   README.md                 # esta mesma documentação
+  bases/                    # ⭐ base_fundos e base_gestoras: os "tudões", ligáveis por CNPJ
   captacao/
     fundos/                 # captacao_fundos*  (uma linha por fundo/classe)
     gestoras/                # captacao_gestoras*  (agregado por gestora)
@@ -62,6 +63,36 @@ raiz). Cada entrada tem `nome`, `pasta`, `descricao`, `grupo`, `linhas`, `coluna
     movimentos pontuais grandes dominando o agregado).
   - `todos` é a soma bruta, sem nenhum filtro — tem a duplicação FIC/master embutida.
 
+## Bases "tudão" — para relacionar fundos e gestoras ⭐
+
+| tabela | grão | chave |
+|---|---|---|
+| `bases/base_fundos` | 1 fundo (classe de cotas) | `cnpj_fundo` |
+| `bases/base_gestoras` | 1 gestora | `cnpj_gestora` |
+
+**Como relacionar:** `base_fundos.cnpj_gestora = base_gestoras.cnpj_gestora` (muitos fundos para
+uma gestora). Os CNPJs vêm do registro da CVM e estão formatados (`00.000.000/0000-00`; gestora PF
+aparece como CPF). `cnpj_fundo` é o CNPJ **da classe**; `cnpj_fundo_pai` é o do fundo "pai" (uma
+mesma pessoa jurídica pode ter várias classes). Também existe `cnpj_administrador`. Gestoras e
+CNPJs têm correspondência 1 para 1 no cadastro; fundos sem gestora informada ficam com
+`cnpj_gestora` vazio. As demais tabelas de captação por fundo/gestora também trazem
+`cnpj_gestora`, então podem ser ligadas às bases pela mesma chave.
+
+- **`base_fundos`**: CNPJs, nome, gestora, administrador, `classe_cvm`, `classe_anbima`,
+  público-alvo, flags (`exclusivo`, `previdencia`, `fundo_de_cotas`), `pl_atual`, `porte_fundo`
+  (Pequeno < R$ 100 mi · Médio < R$ 1 bi · Grande ≥ R$ 1 bi), cotistas, captação/PL/rentabilidade em
+  todas as janelas (`capt_liquida_21d`…), captação e PL inicial por mês
+  (`capt_liquida_mes_AAAAMM`, `pl_inicio_mes_AAAAMM`), `pct_pl_na_gestora`, `rank_pl_na_gestora` e os
+  indicadores da gestora (`gestora_*`).
+- **`base_gestoras`** (universo `sem_cotas`, isto é, sem FICs, para não duplicar PL): `cnpj_gestora`,
+  `gestora`, `n_fundos`, `n_fundos_exclusivos`, `n_fundos_grandes/medios/pequenos`, `pl_atual`,
+  `porte_gestora` (Pequena < R$ 1 bi · Média < R$ 10 bi · Grande ≥ R$ 10 bi), `rank_pl`,
+  `share_pl_pct`, PL por classe CVM (`pl_multimercado`, `pl_renda_fixa`, `pl_acoes`, `pl_cambial`,
+  `pl_fmp_fgts`), captação por janela (`capt_liquida_j`, `capt_bruta_j`, `resgate_j`, `pl_inicial_j`,
+  `pct_pl_j`, `fundos_com_captacao_j`, `delta_cotistas_j`), rankings (`rank_pct_pl_j` entre gestoras
+  com PL ≥ R$ 100 mi; `rank_capt_liquida_j`) e captação/PL por mês.
+- Exemplo (Python): `bf.merge(bg, on="cnpj_gestora", suffixes=("", "_g"))`.
+
 ## Tabelas
 
 ### `captacao/fundos/` — uma linha por fundo (classe)
@@ -90,18 +121,11 @@ janela em vez de colunas lado a lado).
 | `captacao_gestoras_classe_cvm_janelas` | 1 gestora × classe CVM × janela × universo | `gestora`, `classe_cvm`, `janela`, `universo` |
 | `captacao_gestoras_mensal` | 1 gestora × mês × universo | `gestora`, `mes`, `universo` |
 | `captacao_gestoras_diaria` | 1 gestora × pregão × universo | `gestora`, `data`, `universo` |
-| `captacao_gestoras_fundos` | **1 fundo**, com a gestora ao lado ⭐ | `cnpj` |
 
 `captacao_gestoras_ranking` tem `n_fundos`, `pl_atual`, `share_pl_pct` (participação no PL do
 universo) e, por janela, `capt_liquida_j` e `pct_pl_j`.
 
-**`captacao_gestoras_fundos` é a base recomendada para outros relatórios**: mesmas colunas de
-`captacao_fundos` (nível fundo) + todas as colunas de `captacao_gestoras_ranking` (universo
-`sem_cotas`) coladas ao lado com prefixo `gestora_` (ex.: `gestora_pl_atual`,
-`gestora_capt_liquida_21d`) + `pct_pl_na_gestora` (quanto do PL *limpo* da gestora está nesse
-fundo) + `rank_pl_na_gestora` (posição do fundo por PL dentro da própria gestora). Uma linha por
-fundo, FIC ou não — `fundo_de_cotas` identifica os FICs individualmente, caso queira reconstruir
-outra visão (ex.: `todos`) agrupando você mesmo.
+> A antiga `captacao_gestoras_fundos` foi incorporada a `bases/base_fundos`.
 
 ### `publicacoes/` — fatos relevantes, recompras, assembleias, IPE
 
@@ -169,9 +193,7 @@ as gestoras do mesmo `universo` × 100. `captacao_gestoras_classe_janelas` e
 `captacao_gestoras_classe_cvm_janelas` repetem essas contas separando por classe ANBIMA (dentro da
 classe CVM) e só por classe CVM.
 
-**`captacao_gestoras_fundos`** — a linha do fundo + colunas da gestora (`gestora_*`, universo
-`sem_cotas`); `pct_pl_na_gestora = pl_atual do fundo ÷ gestora_pl_atual × 100`;
-`rank_pl_na_gestora` = posição do fundo por PL dentro da gestora.
+**`bases/base_fundos`** — a linha do fundo + colunas da gestora (`gestora_*`, universo `sem_cotas`); `pct_pl_na_gestora = pl_atual do fundo ÷ gestora_pl_atual × 100`; `rank_pl_na_gestora` = posição do fundo por PL dentro da gestora. **`bases/base_gestoras`** usa as somas por gestora descritas acima (universo `sem_cotas`); rankings = posição em ordem decrescente de `pct_pl` (só gestoras com PL ≥ R$ 100 mi) e de `capt_liquida`.
 
 **`captacao_gestoras_mensal` / `_diaria`** — somas por gestora (e `universo`) dos valores mensais /
 diários dos fundos; `pct_pl` mensal = Σ `capt_liquida` ÷ Σ `pl_inicio_mes` × 100.

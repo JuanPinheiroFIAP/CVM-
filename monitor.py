@@ -30,6 +30,18 @@ def so_digitos(s):
     return s.str.replace(r"\D", "", regex=True)
 
 
+def fmt_doc(v):
+    """CNPJ (14 dígitos) ou CPF (11) formatado; vazio se não houver."""
+    if not isinstance(v, str):
+        return ""
+    d = "".join(ch for ch in v if ch.isdigit())
+    if len(d) == 14 or (len(d) == 13):
+        return fmt_cnpj(d)
+    if len(d) == 11:
+        return f"{d[:3]}.{d[3:6]}.{d[6:9]}-{d[9:]}"
+    return v
+
+
 def fmt_cnpj(c):
     c = c.zfill(14)
     return f"{c[:2]}.{c[2:5]}.{c[5:8]}/{c[8:12]}-{c[12:]}"
@@ -39,7 +51,7 @@ def ler_cadastro():
     cl = pd.read_csv(RAW / "reg" / "registro_classe.csv", sep=";", encoding="latin1", dtype=str)
     fu = pd.read_csv(RAW / "reg" / "registro_fundo.csv", sep=";", encoding="latin1", dtype=str)
     cl = cl[cl.Classificacao.notna() & (cl.Situacao == "Em Funcionamento Normal")].copy()  # todas as classes com informe diario (FIF)
-    fu = fu[["ID_Registro_Fundo", "Gestor", "Administrador", "CNPJ_Fundo"]]
+    fu = fu[["ID_Registro_Fundo", "Gestor", "CPF_CNPJ_Gestor", "Tipo_Pessoa_Gestor", "Administrador", "CNPJ_Administrador", "CNPJ_Fundo"]]
     cl = cl.merge(fu, on="ID_Registro_Fundo", how="left")
     cl["cnpj"] = so_digitos(cl.CNPJ_Classe)
     cl = cl.drop_duplicates("cnpj")
@@ -73,7 +85,10 @@ def exportar_captacao(cad, ids, PLf, COTf, JW, bases, datas, meses, MF, MP, DIA)
     prev = cad.Classificacao_Anbima.fillna("").str.contains("previd", case=False)
     attrs = pd.DataFrame({
         "cnpj": [fmt_cnpj(c) for c in ids], "fundo": cad.loc[ids, "Denominacao_Social"].values,
-        "gestora": cad.loc[ids, "Gestor"].fillna("n/d").values, "administrador": cad.loc[ids, "Administrador"].fillna("n/d").values,
+        "cnpj_fundo_pai": [fmt_doc(v) for v in cad.loc[ids, "CNPJ_Fundo"].values],
+        "gestora": cad.loc[ids, "Gestor"].fillna("n/d").values,
+        "cnpj_gestora": [fmt_doc(v) for v in cad.loc[ids, "CPF_CNPJ_Gestor"].values],
+        "cnpj_administrador": [fmt_doc(v) for v in cad.loc[ids, "CNPJ_Administrador"].values], "administrador": cad.loc[ids, "Administrador"].fillna("n/d").values,
         "classe_cvm": cad.loc[ids, "Classificacao"].fillna("Sem classificacao").values,
         "classe_anbima": cad.loc[ids, "Classificacao_Anbima"].fillna("Sem classificacao").values,
         "publico_alvo": cad.loc[ids, "Publico_Alvo"].fillna("n/d").values,
@@ -84,6 +99,12 @@ def exportar_captacao(cad, ids, PLf, COTf, JW, bases, datas, meses, MF, MP, DIA)
         "pl_atual": PLf.iloc[:, -1].loc[ids].values, "cotistas": COTf.iloc[:, -1].loc[ids].values,
         "data_base_informe": pd.Timestamp(datas[-1])}, index=ids)
     attrs.index.name = None
+    gc_map = attrs[attrs.cnpj_gestora != ""].groupby("gestora").cnpj_gestora.first()
+
+    def add_g(df):
+        df = df.copy()
+        df.insert(df.columns.get_loc("gestora") + 1, "cnpj_gestora", df.gestora.map(gc_map).fillna(""))
+        return df
 
     # ---- fundos: janelas (formato longo) e largo
     longos = []
@@ -94,9 +115,9 @@ def exportar_captacao(cad, ids, PLf, COTf, JW, bases, datas, meses, MF, MP, DIA)
         d.insert(0, "cnpj", attrs.cnpj.values)
         longos.append(d)
     L = pd.concat(longos, ignore_index=True)
-    for c in ["fundo", "gestora", "classe_cvm", "classe_anbima", "publico_alvo", "exclusivo", "previdencia", "fundo_de_cotas"]:
+    for c in ["fundo", "gestora", "cnpj_gestora", "classe_cvm", "classe_anbima", "publico_alvo", "exclusivo", "previdencia", "fundo_de_cotas"]:
         L[c] = np.tile(attrs[c].values, len(JW))
-    L = L[["cnpj", "fundo", "gestora", "classe_cvm", "classe_anbima", "publico_alvo", "exclusivo", "previdencia", "fundo_de_cotas", "janela", "data_base",
+    L = L[["cnpj", "fundo", "gestora", "cnpj_gestora", "classe_cvm", "classe_anbima", "publico_alvo", "exclusivo", "previdencia", "fundo_de_cotas", "janela", "data_base",
            "capt_liquida", "capt_bruta", "resgate", "pl_inicial", "pct_pl", "delta_cotistas", "rentab_pct"]]
     ex.salvar("captacao_fundos_janelas", L, "Captação líquida, bruta, resgate, PL inicial, % PL, Δ cotistas e rentabilidade de cada fundo em cada janela (1d…YTD).", "Captação · fundos", pasta="captacao/fundos")
     wide = attrs.reset_index(drop=True).copy()
@@ -113,14 +134,14 @@ def exportar_captacao(cad, ids, PLf, COTf, JW, bases, datas, meses, MF, MP, DIA)
                                   "pl_inicio_mes": MP[i].loc[ids].values}))
     FM = pd.concat(mens, ignore_index=True)
     FM["pct_pl"] = np.where(FM.pl_inicio_mes > 0, FM.capt_liquida / FM.pl_inicio_mes * 100, np.nan)
-    ex.salvar("captacao_fundos_mensal", FM.merge(attrs[["cnpj", "fundo", "gestora"]], on="cnpj"), "Captação líquida mensal por fundo (12 meses fechados + mês corrente).", "Captação · fundos", pasta="captacao/fundos")
+    ex.salvar("captacao_fundos_mensal", FM.merge(attrs[["cnpj", "fundo", "gestora", "cnpj_gestora"]], on="cnpj"), "Captação líquida mensal por fundo (12 meses fechados + mês corrente).", "Captação · fundos", pasta="captacao/fundos")
     DD = DIA.loc[ids].copy()
     DD.index = attrs.cnpj.values
     FD = DD.stack().rename("capt_liquida").reset_index()
     FD.columns = ["cnpj", "data", "capt_liquida"]
     FD["data"] = pd.to_datetime(FD["data"])
     FD = FD[FD.capt_liquida != 0]  # dias sem captacao nem resgate (liquida = 0) sao omitidos
-    ex.salvar("captacao_fundos_diaria", FD.merge(attrs[["cnpj", "fundo", "gestora"]], on="cnpj"), f"Captação líquida diária por fundo nos últimos {N_DIARIO} pregões. Dias com captação líquida = 0 são omitidos (ausência = 0).", "Captação · fundos", pasta="captacao/fundos")
+    ex.salvar("captacao_fundos_diaria", FD.merge(attrs[["cnpj", "fundo", "gestora", "cnpj_gestora"]], on="cnpj"), f"Captação líquida diária por fundo nos últimos {N_DIARIO} pregões. Dias com captação líquida = 0 são omitidos (ausência = 0).", "Captação · fundos", pasta="captacao/fundos")
 
     # ---- gestoras
     def agrega(df, chaves):
@@ -150,7 +171,7 @@ def exportar_captacao(cad, ids, PLf, COTf, JW, bases, datas, meses, MF, MP, DIA)
         k.insert(0, "universo", nome)
         gk.append(k)
     GJ = pd.concat(gj, ignore_index=True)
-    ex.salvar("captacao_gestoras_janelas", GJ, "Captação por gestora em cada janela (formato longo). universo=todos | sem_exclusivos | sem_cotas (recomendado: exclui FICs, que duplicam PL/fluxo com o fundo master). Só fundos com PL inicial>0 entram na captação.", "Captação · gestoras", pasta="captacao/gestoras")
+    ex.salvar("captacao_gestoras_janelas", add_g(GJ), "Captação por gestora em cada janela (formato longo). universo=todos | sem_exclusivos | sem_cotas (recomendado: exclui FICs, que duplicam PL/fluxo com o fundo master). Só fundos com PL inicial>0 entram na captação.", "Captação · gestoras", pasta="captacao/gestoras")
     rk = []
     for nome in universos:
         d = GJ[GJ.universo == nome]
@@ -163,9 +184,9 @@ def exportar_captacao(cad, ids, PLf, COTf, JW, bases, datas, meses, MF, MP, DIA)
         w["share_pl_pct"] = w.pl_atual / w.pl_atual.sum() * 100
         w.insert(0, "universo", nome)
         rk.append(w.reset_index())
-    ex.salvar("captacao_gestoras_ranking", pd.concat(rk, ignore_index=True), "Ranking de gestoras em formato largo: captação líquida e % PL em todas as janelas (universo todos | sem_exclusivos | sem_cotas - recomendado, exclui FICs que duplicam PL/fluxo com o master).", "Captação · gestoras", pasta="captacao/gestoras")
-    ex.salvar("captacao_gestoras_classe_janelas", pd.concat(gc, ignore_index=True), "Captação por gestora × classe CVM × classe ANBIMA × janela.", "Captação · gestoras", pasta="captacao/gestoras")
-    ex.salvar("captacao_gestoras_classe_cvm_janelas", pd.concat(gk, ignore_index=True), "Captação por gestora × classe CVM (Multimercado, Renda Fixa, Ações, Cambial, FMP-FGTS) × janela.", "Captação · gestoras", pasta="captacao/gestoras")
+    ex.salvar("captacao_gestoras_ranking", add_g(pd.concat(rk, ignore_index=True)), "Ranking de gestoras em formato largo: captação líquida e % PL em todas as janelas (universo todos | sem_exclusivos | sem_cotas - recomendado, exclui FICs que duplicam PL/fluxo com o master).", "Captação · gestoras", pasta="captacao/gestoras")
+    ex.salvar("captacao_gestoras_classe_janelas", add_g(pd.concat(gc, ignore_index=True)), "Captação por gestora × classe CVM × classe ANBIMA × janela.", "Captação · gestoras", pasta="captacao/gestoras")
+    ex.salvar("captacao_gestoras_classe_cvm_janelas", add_g(pd.concat(gk, ignore_index=True)), "Captação por gestora × classe CVM (Multimercado, Renda Fixa, Ações, Cambial, FMP-FGTS) × janela.", "Captação · gestoras", pasta="captacao/gestoras")
 
     # ---- base única: cada fundo + sua gestora lado a lado (pra alimentar outros relatórios)
     # usa o universo "sem_cotas" pros totais da gestora: um FIC investe ~tudo no seu master (que também está na base),
@@ -180,7 +201,56 @@ def exportar_captacao(cad, ids, PLf, COTf, JW, bases, datas, meses, MF, MP, DIA)
         cols.remove(c)
     gi = cols.index("gestora") + 1
     cols = cols[:gi] + ["pct_pl_na_gestora", "rank_pl_na_gestora"] + cols[gi:]
-    ex.salvar("captacao_gestoras_fundos", GF[cols], "Base única, uma linha por fundo: cadastro + PL + captação do fundo em todas as janelas, ao lado dos indicadores da gestora (prefixo gestora_, universo sem_cotas: exclui FICs da soma pra não duplicar PL com o fundo master) e do % e ranking do PL do fundo dentro da gestora. fundo_de_cotas='S' identifica os FICs. Pensada como base para outros relatórios.", "Captação · gestoras", pasta="captacao/gestoras")
+    # ---- BASES ("tudão"): uma de fundos e uma de gestoras, para relacionar por cnpj_gestora / cnpj_fundo
+    BF = GF[cols].copy()
+    BF.insert(BF.columns.get_loc("pl_atual") + 1, "porte_fundo", np.where(BF.pl_atual >= 1e9, "Grande", np.where(BF.pl_atual >= 1e8, "Médio", "Pequeno")))
+    for m in meses:
+        mm = FM[FM.mes == pd.Timestamp(m + "-01")].set_index("cnpj")
+        k = m.replace("-", "")
+        BF[f"capt_liquida_mes_{k}"] = BF.cnpj.map(mm.capt_liquida)
+        BF[f"pl_inicio_mes_{k}"] = BF.cnpj.map(mm.pl_inicio_mes)
+    BF = BF.rename(columns={"cnpj": "cnpj_fundo"})
+    BF.insert(0, "cnpj_fundo", BF.pop("cnpj_fundo"))
+    ex.salvar("base_fundos", BF, "TUDÃO DOS FUNDOS: uma linha por fundo (classe), com CNPJs (fundo, fundo-pai, gestora, administrador), cadastro, PL, porte, captação em todas as janelas e meses, % do PL dentro da gestora e indicadores da gestora (gestora_*). Chave: cnpj_fundo; liga com base_gestoras por cnpj_gestora.", "Bases (tudão)", pasta="bases")
+
+    S = GJ[GJ.universo == "sem_cotas"]
+    meas = ["capt_liquida", "capt_bruta", "resgate", "pl_inicial", "pct_pl", "fundos_com_captacao", "delta_cotistas"]
+    W = S.pivot(index="gestora", columns="janela", values=meas)
+    W.columns = [f"{a_}_{b_}" for a_, b_ in W.columns]
+    W = W[[f"{a_}_{j}" for j in jn for a_ in meas]]
+    A = attrs[attrs.fundo_de_cotas != "S"]
+    gs = A.groupby("gestora")
+    BG = pd.DataFrame({"n_fundos": gs.size(), "n_fundos_exclusivos": gs.exclusivo.sum(),
+                       "n_fundos_grandes": gs.pl_atual.apply(lambda x: int((x >= 1e9).sum())),
+                       "n_fundos_medios": gs.pl_atual.apply(lambda x: int(((x >= 1e8) & (x < 1e9)).sum())),
+                       "n_fundos_pequenos": gs.pl_atual.apply(lambda x: int((x < 1e8).sum())),
+                       "pl_atual": gs.pl_atual.sum()})
+    BG = BG.reindex(sorted(attrs.gestora.unique())).fillna(0)
+    for c_ in ("n_fundos", "n_fundos_exclusivos", "n_fundos_grandes", "n_fundos_medios", "n_fundos_pequenos"):
+        BG[c_] = BG[c_].astype(int)
+    BG["porte_gestora"] = np.where(BG.pl_atual >= 1e10, "Grande", np.where(BG.pl_atual >= 1e9, "Média", "Pequena"))
+    BG["rank_pl"] = BG.pl_atual.rank(ascending=False, method="min").astype(int)
+    BG["share_pl_pct"] = BG.pl_atual / BG.pl_atual.sum() * 100
+    for kcls in sorted(A.classe_cvm.unique()):
+        import unicodedata
+        sem_acento = unicodedata.normalize("NFKD", kcls.lower()).encode("ascii", "ignore").decode()
+        slug = "".join(ch for ch in sem_acento.replace(" ", "_").replace("-", "_") if ch.isalnum() or ch == "_")
+        BG[f"pl_{slug}"] = A[A.classe_cvm == kcls].groupby("gestora").pl_atual.sum().reindex(BG.index).fillna(0)
+    BG = BG.join(W)
+    grande = BG.pl_atual >= 1e8
+    for j in jn:
+        BG[f"rank_pct_pl_{j}"] = BG[f"pct_pl_{j}"].where(grande).rank(ascending=False, method="min").astype("Int64")
+        BG[f"rank_capt_liquida_{j}"] = BG[f"capt_liquida_{j}"].rank(ascending=False, method="min").astype("Int64")
+    FMs = FM.merge(attrs[["cnpj", "gestora", "fundo_de_cotas"]], on="cnpj")
+    FMs = FMs[FMs.fundo_de_cotas != "S"].groupby(["gestora", "mes"]).agg(c=("capt_liquida", "sum"), p=("pl_inicio_mes", "sum")).reset_index()
+    for m in meses:
+        k = m.replace("-", "")
+        x = FMs[FMs.mes == pd.Timestamp(m + "-01")].set_index("gestora")
+        BG[f"capt_liquida_mes_{k}"] = x.c.reindex(BG.index)
+        BG[f"pl_inicio_mes_{k}"] = x.p.reindex(BG.index)
+    BG = BG.reset_index()
+    BG.insert(0, "cnpj_gestora", BG.gestora.map(gc_map).fillna(""))
+    ex.salvar("base_gestoras", BG, "TUDÃO DAS GESTORAS: uma linha por gestora (universo sem_cotas, ou seja, sem FICs), com CNPJ, PL, porte, nº de fundos por porte, PL por classe CVM, captação em todas as janelas e meses e rankings. Chave: cnpj_gestora; liga com base_fundos por cnpj_gestora.", "Bases (tudão)", pasta="bases")
 
     FMg = FM.merge(attrs[["cnpj", "gestora", "exclusivo", "fundo_de_cotas"]], on="cnpj")
     gm = []
@@ -189,14 +259,14 @@ def exportar_captacao(cad, ids, PLf, COTf, JW, bases, datas, meses, MF, MP, DIA)
         a["pct_pl"] = np.where(a.pl_inicio_mes > 0, a.capt_liquida / a.pl_inicio_mes * 100, np.nan)
         a.insert(0, "universo", un)
         gm.append(a)
-    ex.salvar("captacao_gestoras_mensal", pd.concat(gm, ignore_index=True), "Captação líquida mensal por gestora (universo todos | sem_exclusivos | sem_cotas).", "Captação · gestoras", pasta="captacao/gestoras")
+    ex.salvar("captacao_gestoras_mensal", add_g(pd.concat(gm, ignore_index=True)), "Captação líquida mensal por gestora (universo todos | sem_exclusivos | sem_cotas).", "Captação · gestoras", pasta="captacao/gestoras")
     FDg = FD.merge(attrs[["cnpj", "gestora", "exclusivo", "fundo_de_cotas"]], on="cnpj")
     gd = []
     for un, d in (("todos", FDg), ("sem_exclusivos", FDg[~FDg.exclusivo]), ("sem_cotas", FDg[FDg.fundo_de_cotas != "S"])):
         a = d.groupby(["gestora", "data"], as_index=False).agg(capt_liquida=("capt_liquida", "sum"))
         a.insert(0, "universo", un)
         gd.append(a)
-    ex.salvar("captacao_gestoras_diaria", pd.concat(gd, ignore_index=True), f"Captação líquida diária por gestora nos últimos {N_DIARIO} pregões.", "Captação · gestoras", pasta="captacao/gestoras")
+    ex.salvar("captacao_gestoras_diaria", add_g(pd.concat(gd, ignore_index=True)), f"Captação líquida diária por gestora nos últimos {N_DIARIO} pregões.", "Captação · gestoras", pasta="captacao/gestoras")
 
 
 def main():
@@ -286,7 +356,7 @@ def main():
             "pa": c.Publico_Alvo if isinstance(c.Publico_Alvo, str) else "n/d",
             "ex": c.Exclusivo == "S", "fc": c.Classe_Cotas if isinstance(c.Classe_Cotas, str) else "n/d",
             "k": c.Classificacao,
-            "g": c.Gestor if isinstance(c.Gestor, str) else "n/d",
+            "g": c.Gestor if isinstance(c.Gestor, str) else "n/d", "gc": fmt_doc(c.CPF_CNPJ_Gestor),
             "ad": c.Administrador if isinstance(c.Administrador, str) else "n/d",
             "pl": mil(PLf.loc[cnpj].iloc[-1]),
             "F": [mil(w["F"][cnpj]) for w in JW], "C": [mil(w["C"][cnpj]) for w in JW],

@@ -5,3 +5,4 @@ exportacoes/
 painel_cvm.html
 __pycache__/
 .claude/
+logs/

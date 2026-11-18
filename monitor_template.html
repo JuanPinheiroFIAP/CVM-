@@ -132,7 +132,7 @@ const heat=(v,cap)=>{if(v==null||!isFinite(v)||v===0) return 'transparent'; cons
 
 function gestoras(){
   const by=new Map(); U().forEach(f=>{(by.get(f.g)||by.set(f.g,[]).get(f.g)).push(f);});
-  const rows=[...by].map(([g,fs])=>{const a=aggF(fs,st.w); return {g,fs,...a,porte:porteG(a.pl)};});
+  const rows=[...by].map(([g,fs])=>{const a=aggF(fs,st.w); return {g,fs,...a,gc:(fs.find(f=>f.gc)||{}).gc||'',porte:porteG(a.pl)};});
   rows.sort((a,b)=>b.pl-a.pl).forEach((r,i)=>r.rankPL=i+1);
   return rows;
 }
@@ -182,11 +182,11 @@ function renderPanorama(){
   list.sort((a,b)=>{const x=val(a),y=val(b); if(x==null) return 1; if(y==null) return -1; return (typeof x==='string'?x.localeCompare(y):x-y)*st.pdir;});
   st.plist=list;
   const cap=quant(sortN(rows.map(r=>Math.abs(r.F))),.92)||1, capP=quant(sortN(rows.map(r=>Math.abs(r.pct||0))),.92)||1;
-  const C=[['#','rankPL'],['Gestora','g'],['Porte','porte'],['PL (R$ bi)','pl'],[`Captação líquida ${j} (R$ mi)`,'F'],['% do PL inicial','pct']];
-  $('ptbl').innerHTML='<thead><tr>'+C.map(([n,k])=>`<th data-k="${k}" class="${k==='g'||k==='porte'?'l':''}">${n}${st.psort===k?(st.pdir>0?' ▲':' ▼'):''}</th>`).join('')+'</tr></thead><tbody>'+
-   list.map(r=>`<tr class="c" data-g="${enc(r.g)}"><td class="mut">${r.rankPL}</td><td class="l" title="${esc(r.g)}">${esc(r.g)}</td><td class="l">${tag(r.porte)}</td><td>${bi(r.pl)}</td>
+  const C=[['#','rankPL'],['Gestora','g'],['CNPJ da gestora','gc'],['Porte','porte'],['PL (R$ bi)','pl'],[`Captação líquida ${j} (R$ mi)`,'F'],['% do PL inicial','pct']];
+  $('ptbl').innerHTML='<thead><tr>'+C.map(([n,k])=>`<th data-k="${k}" class="${k==='g'||k==='porte'||k==='gc'?'l':''}">${n}${st.psort===k?(st.pdir>0?' ▲':' ▼'):''}</th>`).join('')+'</tr></thead><tbody>'+
+   list.map(r=>`<tr class="c" data-g="${enc(r.g)}"><td class="mut">${r.rankPL}</td><td class="l" title="${esc(r.g)}">${esc(r.g)}</td><td class="l mut">${esc(r.gc)}</td><td class="l">${tag(r.porte)}</td><td>${bi(r.pl)}</td>
      <td class="${cls(r.F)}" style="background:${heat(r.F,cap)}">${mi(r.F)}</td><td class="${cls(r.pct)}" style="background:${heat(r.pct,capP)}">${pct(r.pct)}</td></tr>`).join('')+'</tbody>';
-  $('ptbl').querySelector('thead').onclick=e=>{const th=e.target.closest('th'); if(!th) return; const k=th.dataset.k; if(st.psort===k) st.pdir*=-1; else {st.psort=k; st.pdir=k==='g'?1:-1;} renderPanorama();};
+  $('ptbl').querySelector('thead').onclick=e=>{const th=e.target.closest('th'); if(!th) return; const k=th.dataset.k; if(st.psort===k) st.pdir*=-1; else {st.psort=k; st.pdir=(k==='g'||k==='gc')?1:-1;} renderPanorama();};
   $('ptbl').querySelector('tbody').onclick=e=>{const tr=e.target.closest('tr'); if(tr) openG(dec(tr.dataset.g));};
 }
 function dl(nome,linhas){
@@ -197,7 +197,7 @@ function dl(nome,linhas){
 const cn=x=>x==null?'':String(x).replace('.',',');
 function csvPanorama(){
   const j=M.janelas[st.w];
-  dl(`gestoras_${j}_${M.ultima}.csv`,[['Gestora','Porte','PL_R$','Captacao_liquida_R$_'+j,'Pct_PL_inicial']].concat(st.plist.map(r=>[r.g,nomeG[r.porte],cn(r.pl*1000),cn(r.F*1000),cn(r.pct)])));
+  dl(`gestoras_${j}_${M.ultima}.csv`,[['Gestora','CNPJ_gestora','Porte','PL_R$','Captacao_liquida_R$_'+j,'Pct_PL_inicial']].concat(st.plist.map(r=>[r.g,r.gc,nomeG[r.porte],cn(r.pl*1000),cn(r.F*1000),cn(r.pct)])));
 }
 
 // ================= GESTORAS =================
@@ -271,7 +271,7 @@ function detalheGest(me,j){
     if(v!=null&&arr){const a2=arr.slice(), i=a2.indexOf(v); if(i>=0) a2.splice(i,1); if(a2.length>=MINPEERS) pm=wmean(a2);}
     return {f,v,pm,spr:v!=null&&pm!=null?v-pm:null,shr:f.pl/me.pl*100,porte:porteF(f.pl)};
   });
-  const kf={n:r=>r.f.n,a:r=>r.f.a,k:r=>r.f.k,porte:r=>r.f.pl,pl:r=>r.f.pl,shr:r=>r.shr,F:r=>r.f.F[w],v:r=>r.v,pm:r=>r.pm,spr:r=>r.spr};
+  const kf={n:r=>r.f.n,id:r=>r.f.id,a:r=>r.f.a,k:r=>r.f.k,porte:r=>r.f.pl,pl:r=>r.f.pl,shr:r=>r.shr,F:r=>r.f.F[w],v:r=>r.v,pm:r=>r.pm,spr:r=>r.spr};
   const fk=kf[st.fsort]||kf.pl; frows.sort((a,b)=>{const x=fk(a),y=fk(b); if(x==null) return 1; if(y==null) return -1; return (typeof x==='string'?x.localeCompare(y):x-y)*st.fdir;});
   st.frows=frows;
   const maxShr=Math.max(...frows.map(r=>r.shr),1);
@@ -280,7 +280,7 @@ function detalheGest(me,j){
   $('gdet').innerHTML=`
   <div class="card" style="padding:14px 16px">
     <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap"><h2 style="font-size:19px;margin:0">${esc(g)}</h2>${tag(me.porte)}
-    <span class="sub">${admTop.map(([n,v])=>esc(n)).join(' · ')}</span></div>
+    <span class="sub"><b>CNPJ ${esc(me.gc||'n/d')}</b> · </span><span class="sub">${admTop.map(([n,v])=>esc(n)).join(' · ')}</span></div>
   </div>
   <div class="cards">
     <div class="kc"><div class="t">PL total</div><div class="v">${brl(me.pl)}</div><div class="s">R$ ${bi(me.pl)} bi · #${me.rankPL} de ${GR.length} gestoras em PL</div></div>
@@ -296,8 +296,8 @@ function detalheGest(me,j){
       <div class="s" style="margin-top:6px">${dif==null?'':`Gestora ${dif>=0?'acima':'abaixo'} do mercado em <b class="${cls(dif)}">${nf(Math.abs(dif),2)} p.p.</b>`}</div></div>
   </div>
   <div class="card"><div style="display:flex;align-items:center;gap:10px;margin-bottom:8px"><h2 style="margin:0">Fundos da gestora (${fs.length})</h2><button class="btn" id="fcsv" style="margin-left:auto">⬇ CSV dos fundos</button></div>
-    <div class="scroll"><table id="ftbl"><thead><tr>${[['n','Fundo','l'],['a','Classe ANBIMA','l'],['k','Classe CVM','l'],['porte','Porte','l'],['pl','PL (R$ mi)'],['shr','% do PL da gestora'],['F',`Capt. líq. ${j} (R$ mi)`],['v','% PL captação'],['pm','Peers (média)'],['spr','Spread (pp)']].map(([k,n,l])=>`<th data-k="${k}" class="${l||''}">${n}${st.fsort===k?(st.fdir>0?' ▲':' ▼'):''}</th>`).join('')}</tr></thead><tbody>
-    ${frows.map(r=>`<tr><td class="l" title="${esc(r.f.n)} · ${r.f.id}">${esc(r.f.n)}</td><td class="l">${esc(r.f.a)}</td><td class="l">${esc(r.f.k)}</td><td class="l">${tag(r.porte,nomeF)}</td><td>${mi(r.f.pl)}</td><td><span class="bar" style="width:${r.shr/maxShr*70}px"></span> ${nf(r.shr,1)}%</td><td class="${cls(r.f.F[w])}">${mi(r.f.F[w])}</td><td class="${cls(r.v)}">${pct(r.v)}</td><td>${pct(r.pm)}</td><td class="${cls(r.spr)}">${r.spr==null?'–':nf(r.spr,2)}</td></tr>`).join('')}
+    <div class="scroll"><table id="ftbl"><thead><tr>${[['n','Fundo','l'],['id','CNPJ do fundo','l'],['a','Classe ANBIMA','l'],['k','Classe CVM','l'],['porte','Porte','l'],['pl','PL (R$ mi)'],['shr','% do PL da gestora'],['F',`Capt. líq. ${j} (R$ mi)`],['v','% PL captação'],['pm','Peers (média)'],['spr','Spread (pp)']].map(([k,n,l])=>`<th data-k="${k}" class="${l||''}">${n}${st.fsort===k?(st.fdir>0?' ▲':' ▼'):''}</th>`).join('')}</tr></thead><tbody>
+    ${frows.map(r=>`<tr><td class="l" title="${esc(r.f.n)}">${esc(r.f.n)}</td><td class="l mut">${esc(r.f.id)}</td><td class="l">${esc(r.f.a)}</td><td class="l">${esc(r.f.k)}</td><td class="l">${tag(r.porte,nomeF)}</td><td>${mi(r.f.pl)}</td><td><span class="bar" style="width:${r.shr/maxShr*70}px"></span> ${nf(r.shr,1)}%</td><td class="${cls(r.f.F[w])}">${mi(r.f.F[w])}</td><td class="${cls(r.v)}">${pct(r.v)}</td><td>${pct(r.pm)}</td><td class="${cls(r.spr)}">${r.spr==null?'–':nf(r.spr,2)}</td></tr>`).join('')}
     </tbody></table></div>
     <p class="sub" style="margin:8px 0 0">Peers = outros fundos da mesma classe ANBIMA e público-alvo (mínimo ${MINPEERS}). Spread = % PL do fundo − média dos peers (sem extremos).</p>
 
@@ -325,7 +325,7 @@ function detalheGest(me,j){
   </div>
 
   </div>`;
-  $('ftbl').querySelector('thead').onclick=e=>{const th=e.target.closest('th'); if(!th) return; const k=th.dataset.k; if(st.fsort===k) st.fdir*=-1; else {st.fsort=k; st.fdir=(k==='n'||k==='a'||k==='k')?1:-1;} renderGest();};
+  $('ftbl').querySelector('thead').onclick=e=>{const th=e.target.closest('th'); if(!th) return; const k=th.dataset.k; if(st.fsort===k) st.fdir*=-1; else {st.fsort=k; st.fdir=(k==='n'||k==='id'||k==='a'||k==='k')?1:-1;} renderGest();};
   $('fcsv').onclick=()=>dl(`fundos_${g.replace(/[^\w]+/g,'_').slice(0,40)}_${M.ultima}.csv`,[['Fundo','CNPJ','Classe_ANBIMA','Porte','PL_R$','Pct_PL_gestora','Captacao_liquida_R$_'+j,'Pct_PL_captacao','Peers_mediana','Spread_pp']]
     .concat(st.frows.map(r=>[r.f.n,r.f.id,r.f.a,nomeF[r.porte],cn(r.f.pl*1000),cn(r.shr),cn(num(r.f.F[w])*1000),cn(r.v),cn(r.pm),cn(r.spr)])));
 }
