@@ -9,6 +9,7 @@ navegador, entao voce troca a definicao de peer (classe ANBIMA, publico-alvo,
 faixa de PL, gestor...) sem rodar nada de novo.
 """
 import json
+import sys
 import re
 import zipfile
 from pathlib import Path
@@ -37,7 +38,7 @@ def fmt_cnpj(c):
 def ler_cadastro():
     cl = pd.read_csv(RAW / "reg" / "registro_classe.csv", sep=";", encoding="latin1", dtype=str)
     fu = pd.read_csv(RAW / "reg" / "registro_fundo.csv", sep=";", encoding="latin1", dtype=str)
-    cl = cl[(cl.Classificacao == "Multimercado") & (cl.Situacao == "Em Funcionamento Normal")].copy()
+    cl = cl[cl.Classificacao.notna() & (cl.Situacao == "Em Funcionamento Normal")].copy()  # todas as classes com informe diario (FIF)
     fu = fu[["ID_Registro_Fundo", "Gestor", "Administrador", "CNPJ_Fundo"]]
     cl = cl.merge(fu, on="ID_Registro_Fundo", how="left")
     cl["cnpj"] = so_digitos(cl.CNPJ_Classe)
@@ -73,6 +74,7 @@ def exportar_captacao(cad, ids, PLf, COTf, JW, bases, datas, meses, MF, MP, DIA)
     attrs = pd.DataFrame({
         "cnpj": [fmt_cnpj(c) for c in ids], "fundo": cad.loc[ids, "Denominacao_Social"].values,
         "gestora": cad.loc[ids, "Gestor"].fillna("n/d").values, "administrador": cad.loc[ids, "Administrador"].fillna("n/d").values,
+        "classe_cvm": cad.loc[ids, "Classificacao"].fillna("Sem classificacao").values,
         "classe_anbima": cad.loc[ids, "Classificacao_Anbima"].fillna("Sem classificacao").values,
         "publico_alvo": cad.loc[ids, "Publico_Alvo"].fillna("n/d").values,
         "exclusivo": (cad.loc[ids, "Exclusivo"] == "S").values, "previdencia": prev.loc[ids].values,
@@ -92,9 +94,9 @@ def exportar_captacao(cad, ids, PLf, COTf, JW, bases, datas, meses, MF, MP, DIA)
         d.insert(0, "cnpj", attrs.cnpj.values)
         longos.append(d)
     L = pd.concat(longos, ignore_index=True)
-    for c in ["fundo", "gestora", "classe_anbima", "publico_alvo", "exclusivo", "previdencia", "fundo_de_cotas"]:
+    for c in ["fundo", "gestora", "classe_cvm", "classe_anbima", "publico_alvo", "exclusivo", "previdencia", "fundo_de_cotas"]:
         L[c] = np.tile(attrs[c].values, len(JW))
-    L = L[["cnpj", "fundo", "gestora", "classe_anbima", "publico_alvo", "exclusivo", "previdencia", "fundo_de_cotas", "janela", "data_base",
+    L = L[["cnpj", "fundo", "gestora", "classe_cvm", "classe_anbima", "publico_alvo", "exclusivo", "previdencia", "fundo_de_cotas", "janela", "data_base",
            "capt_liquida", "capt_bruta", "resgate", "pl_inicial", "pct_pl", "delta_cotistas", "rentab_pct"]]
     ex.salvar("captacao_fundos_janelas", L, "Captação líquida, bruta, resgate, PL inicial, % PL, Δ cotistas e rentabilidade de cada fundo em cada janela (1d…YTD).", "Captação · fundos", pasta="captacao/fundos")
     wide = attrs.reset_index(drop=True).copy()
@@ -117,7 +119,8 @@ def exportar_captacao(cad, ids, PLf, COTf, JW, bases, datas, meses, MF, MP, DIA)
     FD = DD.stack().rename("capt_liquida").reset_index()
     FD.columns = ["cnpj", "data", "capt_liquida"]
     FD["data"] = pd.to_datetime(FD["data"])
-    ex.salvar("captacao_fundos_diaria", FD.merge(attrs[["cnpj", "fundo", "gestora"]], on="cnpj"), f"Captação líquida diária por fundo nos últimos {N_DIARIO} pregões.", "Captação · fundos", pasta="captacao/fundos")
+    FD = FD[FD.capt_liquida != 0]  # dias sem captacao nem resgate (liquida = 0) sao omitidos
+    ex.salvar("captacao_fundos_diaria", FD.merge(attrs[["cnpj", "fundo", "gestora"]], on="cnpj"), f"Captação líquida diária por fundo nos últimos {N_DIARIO} pregões. Dias com captação líquida = 0 são omitidos (ausência = 0).", "Captação · fundos", pasta="captacao/fundos")
 
     # ---- gestoras
     def agrega(df, chaves):
@@ -133,16 +136,19 @@ def exportar_captacao(cad, ids, PLf, COTf, JW, bases, datas, meses, MF, MP, DIA)
     L["pl_atual"] = L.cnpj.map(attrs.set_index("cnpj").pl_atual)
     # fundo de cotas (FIC): investe ~tudo no fundo master, que também entra na base -> duplica PL/fluxo se somado junto.
     universos = {"todos": L, "sem_exclusivos": L[~L.exclusivo], "sem_cotas": L[L.fundo_de_cotas != "S"]}
-    gj, gc = [], []
+    gj, gc, gk = [], [], []
     for nome, df in universos.items():
         a = agrega(df, ["gestora", "janela", "data_base"])
         pl = df[df.janela == jn[0]].groupby("gestora").pl_atual.sum()
         a.insert(3, "pl_atual", a.gestora.map(pl))
         a.insert(0, "universo", nome)
         gj.append(a)
-        b = agrega(df, ["gestora", "classe_anbima", "janela", "data_base"])
+        b = agrega(df, ["gestora", "classe_cvm", "classe_anbima", "janela", "data_base"])
         b.insert(0, "universo", nome)
         gc.append(b)
+        k = agrega(df, ["gestora", "classe_cvm", "janela", "data_base"])
+        k.insert(0, "universo", nome)
+        gk.append(k)
     GJ = pd.concat(gj, ignore_index=True)
     ex.salvar("captacao_gestoras_janelas", GJ, "Captação por gestora em cada janela (formato longo). universo=todos | sem_exclusivos | sem_cotas (recomendado: exclui FICs, que duplicam PL/fluxo com o fundo master). Só fundos com PL inicial>0 entram na captação.", "Captação · gestoras", pasta="captacao/gestoras")
     rk = []
@@ -158,7 +164,8 @@ def exportar_captacao(cad, ids, PLf, COTf, JW, bases, datas, meses, MF, MP, DIA)
         w.insert(0, "universo", nome)
         rk.append(w.reset_index())
     ex.salvar("captacao_gestoras_ranking", pd.concat(rk, ignore_index=True), "Ranking de gestoras em formato largo: captação líquida e % PL em todas as janelas (universo todos | sem_exclusivos | sem_cotas - recomendado, exclui FICs que duplicam PL/fluxo com o master).", "Captação · gestoras", pasta="captacao/gestoras")
-    ex.salvar("captacao_gestoras_classe_janelas", pd.concat(gc, ignore_index=True), "Captação por gestora × classe ANBIMA × janela.", "Captação · gestoras", pasta="captacao/gestoras")
+    ex.salvar("captacao_gestoras_classe_janelas", pd.concat(gc, ignore_index=True), "Captação por gestora × classe CVM × classe ANBIMA × janela.", "Captação · gestoras", pasta="captacao/gestoras")
+    ex.salvar("captacao_gestoras_classe_cvm_janelas", pd.concat(gk, ignore_index=True), "Captação por gestora × classe CVM (Multimercado, Renda Fixa, Ações, Cambial, FMP-FGTS) × janela.", "Captação · gestoras", pasta="captacao/gestoras")
 
     # ---- base única: cada fundo + sua gestora lado a lado (pra alimentar outros relatórios)
     # usa o universo "sem_cotas" pros totais da gestora: um FIC investe ~tudo no seu master (que também está na base),
@@ -278,20 +285,19 @@ def main():
             "a": (c.Classificacao_Anbima if isinstance(c.Classificacao_Anbima, str) else "Sem classificacao"),
             "pa": c.Publico_Alvo if isinstance(c.Publico_Alvo, str) else "n/d",
             "ex": c.Exclusivo == "S", "fc": c.Classe_Cotas if isinstance(c.Classe_Cotas, str) else "n/d",
-            "co": c.Forma_Condominio if isinstance(c.Forma_Condominio, str) else "n/d",
+            "k": c.Classificacao,
             "g": c.Gestor if isinstance(c.Gestor, str) else "n/d",
             "ad": c.Administrador if isinstance(c.Administrador, str) else "n/d",
-            "ini": c.Data_Inicio if isinstance(c.Data_Inicio, str) else None,
-            "pl": mil(PLf.loc[cnpj].iloc[-1]), "nc": int(COTf.loc[cnpj].iloc[-1]) if np.isfinite(COTf.loc[cnpj].iloc[-1]) else None,
+            "pl": mil(PLf.loc[cnpj].iloc[-1]),
             "F": [mil(w["F"][cnpj]) for w in JW], "C": [mil(w["C"][cnpj]) for w in JW],
             "R": [mil(w["R"][cnpj]) for w in JW], "P0": [mil(w["P0"][cnpj]) for w in JW],
-            "DC": [r(w["DC"][cnpj], 0) for w in JW], "RT": [r(w["RT"][cnpj], 2) for w in JW],
             "MF": [mil(s[cnpj]) for s in MF], "MP": [mil(s[cnpj]) for s in MP],
             "D": [mil(v) for v in DIA.loc[cnpj].values],
         })
 
     print("exportando tabelas da captação…")
-    exportar_captacao(cad, ids, PLf, COTf, JW, bases, datas, meses, MF, MP, DIA)
+    if "--sem-exportar" not in sys.argv:  # util ao ajustar so o visual
+        exportar_captacao(cad, ids, PLf, COTf, JW, bases, datas, meses, MF, MP, DIA)
 
     meta = {"ultima": ult, "janelas": [j[0] for j in JANELAS], "meses": meses, "datas_diarias": datas[-N_DIARIO:],
             "bases": [datas[b] for b in bases], "gerado": pd.Timestamp.now().strftime("%d/%m/%Y %H:%M")}

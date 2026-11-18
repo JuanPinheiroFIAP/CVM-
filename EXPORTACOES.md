@@ -1,7 +1,9 @@
 # Exportações do Painel CVM — dicionário de dados
 
-Dados abertos da CVM já processados (captação de fundos multimercado, publicações/fatos
-relevantes e composição de carteira), exportados para consumo por outros projetos. Gerados
+Dados abertos da CVM já processados (captação de **todas as classes de fundos com Informe
+Diário** — Multimercado, Renda Fixa, Ações, Cambial e FMP-FGTS; publicações/fatos relevantes; e
+composição de carteira), exportados para consumo por outros projetos. FIDC, FII, FIP e FIAGRO não
+têm informe diário de captação e não estão nas tabelas de captação. Gerados
 por `atualizar.bat` / `python painel.py` e regravados do zero a cada execução — não são
 editados manualmente.
 
@@ -71,7 +73,7 @@ raiz). Cada entrada tem `nome`, `pasta`, `descricao`, `grupo`, `linhas`, `coluna
 | `captacao_fundos_mensal` | 1 fundo × mês (13 últimos meses) | `cnpj`, `mes` |
 | `captacao_fundos_diaria` | 1 fundo × pregão (~63 últimos) | `cnpj`, `data` |
 
-`captacao_fundos` traz cadastro (`fundo`, `gestora`, `administrador`, `classe_anbima`,
+`captacao_fundos` traz cadastro (`fundo`, `gestora`, `administrador`, `classe_cvm`, `classe_anbima`,
 `publico_alvo`, `exclusivo`, `previdencia`, `fundo_de_cotas`, `condominio`, `data_inicio`,
 `pl_atual`, `cotistas`) e, para cada janela `j`, as colunas `capt_liquida_j`, `capt_bruta_j`,
 `resgate_j`, `pl_inicial_j`, `pct_pl_j` (= capt_liquida ÷ pl_inicial), `delta_cotistas_j`,
@@ -84,7 +86,8 @@ janela em vez de colunas lado a lado).
 |---|---|---|
 | `captacao_gestoras_ranking` | 1 gestora × universo (formato largo) | `gestora`, `universo` |
 | `captacao_gestoras_janelas` | 1 gestora × janela × universo | `gestora`, `janela`, `universo` |
-| `captacao_gestoras_classe_janelas` | 1 gestora × classe ANBIMA × janela × universo | `gestora`, `classe_anbima`, `janela`, `universo` |
+| `captacao_gestoras_classe_janelas` | 1 gestora × classe CVM × classe ANBIMA × janela × universo | `gestora`, `classe_cvm`, `classe_anbima`, `janela`, `universo` |
+| `captacao_gestoras_classe_cvm_janelas` | 1 gestora × classe CVM × janela × universo | `gestora`, `classe_cvm`, `janela`, `universo` |
 | `captacao_gestoras_mensal` | 1 gestora × mês × universo | `gestora`, `mes`, `universo` |
 | `captacao_gestoras_diaria` | 1 gestora × pregão × universo | `gestora`, `data`, `universo` |
 | `captacao_gestoras_fundos` | **1 fundo**, com a gestora ao lado ⭐ | `cnpj` |
@@ -123,6 +126,66 @@ Todas trazem `link` (URL do documento no portal da CVM — abre direto só atrav
 Só entram fundos com PL ≥ mínimo configurado (`--min-pl`, default R$20 mi). `pct_pl` é o % do PL
 do fundo naquela posição/tipo; `pct_pl_anterior` e `delta_pp` comparam com o mês de carteira
 anterior quando disponível.
+
+## Como cada coluna é calculada (por tabela)
+
+Fonte da captação: **Informe Diário de Fundos** (CVM) — `CAPTC_DIA`, `RESG_DIA`,
+`VL_PATRIM_LIQ`, `NR_COTST`, `VL_QUOTA` por classe e dia (subclasses somadas na classe) — mais o
+**Registro de Fundo/Classe** para o cadastro. Valores em R$ cheios.
+
+**Conceitos usados em várias tabelas**
+
+| termo | cálculo |
+|---|---|
+| `capt_liquida` | Σ (captação − resgate) dos pregões da janela (do pregão seguinte à data-base até o último dado) |
+| `capt_bruta` / `resgate` | Σ da captação / Σ dos resgates no mesmo período |
+| `pl_inicial` | PL do fundo na **data-base** da janela (último valor conhecido até essa data) |
+| `pct_pl` | `capt_liquida ÷ pl_inicial × 100`; vazio quando `pl_inicial ≤ 0` |
+| `delta_cotistas` | nº de cotistas na última data − nº na data-base |
+| `rentab_pct` | `cota_última ÷ cota_data-base − 1`, em %. Para classes com subclasses, usa a cota da subclasse de maior PL do dia |
+| `janela` / `data_base` | 1d, 5d, 21d, 63d, 126d, 252d = nº de pregões para trás; MTD/YTD = último pregão do mês/ano anterior |
+| `classe_cvm` | classificação do registro CVM: Multimercado, Renda Fixa, Ações, Cambial, FMP-FGTS |
+| `classe_anbima` | classificação ANBIMA do registro (a "linha" do fundo) |
+| `previdencia` | `true` quando a classe ANBIMA contém "Previdência" |
+
+**`captacao_fundos` / `captacao_fundos_janelas`** — uma linha por classe (fundo). `pl_atual` = PL do
+último pregão; `cotistas` = nº de cotistas do último pregão. As colunas por janela seguem a tabela
+acima. Universo: classes em funcionamento normal, com informe nos últimos 5 pregões e PL > 0.
+
+**`captacao_fundos_mensal`** — por fundo e mês: `capt_liquida` = Σ captação líquida dos pregões
+do mês (o último mês é parcial); `pl_inicio_mes` = PL no último pregão do mês anterior;
+`pct_pl = capt_liquida ÷ pl_inicio_mes × 100`.
+
+**`captacao_fundos_diaria`** — captação líquida de cada pregão dos últimos 63. **Dias com
+`capt_liquida = 0` são omitidos** (ausência = 0), para reduzir o tamanho.
+
+**Tabelas por gestora** — agrupam os fundos pelo nome da gestora do cadastro:
+`n_fundos` = nº de classes; `n_fundos_com_base` = nº com `pl_inicial > 0`; `pl_atual` = Σ PL
+atual; **`capt_liquida`, `capt_bruta`, `resgate`, `pl_inicial` = somas apenas dos fundos com
+`pl_inicial > 0`** (fundo criado dentro da janela fica de fora); `fundos_com_captacao` = nº com
+`capt_liquida > 0`; `delta_cotistas` = Σ; `pct_pl = Σ capt_liquida ÷ Σ pl_inicial × 100`
+(média ponderada pelo PL). `share_pl_pct` (ranking) = `pl_atual` da gestora ÷ Σ `pl_atual` de todas
+as gestoras do mesmo `universo` × 100. `captacao_gestoras_classe_janelas` e
+`captacao_gestoras_classe_cvm_janelas` repetem essas contas separando por classe ANBIMA (dentro da
+classe CVM) e só por classe CVM.
+
+**`captacao_gestoras_fundos`** — a linha do fundo + colunas da gestora (`gestora_*`, universo
+`sem_cotas`); `pct_pl_na_gestora = pl_atual do fundo ÷ gestora_pl_atual × 100`;
+`rank_pl_na_gestora` = posição do fundo por PL dentro da gestora.
+
+**`captacao_gestoras_mensal` / `_diaria`** — somas por gestora (e `universo`) dos valores mensais /
+diários dos fundos; `pct_pl` mensal = Σ `capt_liquida` ÷ Σ `pl_inicio_mes` × 100.
+
+> **Painel (tela)**: usa as mesmas contas com o universo **sem exclusivos e sem FIC** (padrão),
+> alternável pelos filtros do topo; os valores aparecem em R$ mi/bi. A aba "Como é calculado" do
+> painel descreve cada tabela da tela coluna por coluna (porte, peers, média por fundo etc.).
+
+**Publicações** — `publicacoes_*` são cópias das listas do IPE/Eventuais da CVM sem cálculo
+(recompras = documentos do IPE cujo *assunto/espécie* contém termos de recompra, excluídas OPAs).
+**Carteiras** — `valor_mercado` = `VL_MERC_POS_FINAL` do CDA; `pct_pl = valor_mercado ÷ PL do
+fundo × 100`; `delta_pp = pct_pl − pct_pl_anterior` (mês de carteira anterior);
+`carteiras_tipos_aplicacao` soma `pct_pl` por tipo de aplicação. Escopo atual: fundos
+**Multimercado** abertos com PL ≥ mínimo.
 
 ## Atualização
 

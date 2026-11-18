@@ -2,7 +2,7 @@
 
 Painel único com dados abertos da CVM:
 
-- **Captação Multimercado por gestora**: captação líquida em várias janelas, ranking, peers e acompanhamento de gestoras.
+- **Captação de Fundos por gestora** (Multimercado, Renda Fixa, Ações, Cambial e FMP-FGTS): panorama de todas as gestoras com PL, porte e captação líquida; página de cada gestora com fundos, classes, gráficos e comparação com peers; aba "Como é calculado" explicando cada tabela.
 - **Publicações CVM**: fatos relevantes, recompras, assembleias, eventos de fundos e composição de carteira (CDA).
 
 ## Como usar

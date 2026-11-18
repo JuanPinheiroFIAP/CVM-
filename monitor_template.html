@@ -3,602 +3,420 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Monitor de Captação Multimercado</title>
+<title>Captação de Fundos</title>
 <style>
-:root{--bg:#f6f7f9;--card:#fff;--ink:#14181f;--mut:#5d6675;--line:#e3e6ec;--acc:#cc092f;--pos:#0b7a53;--neg:#b42318;--chip:#eef0f4;--sel:#fff3f5;--peer:#7a869a}
-@media (prefers-color-scheme:dark){:root:not([data-theme=light]){--bg:#0f1218;--card:#171b23;--ink:#e8ebf0;--mut:#9aa4b5;--line:#272d38;--acc:#ff4d6d;--pos:#3ecf8e;--neg:#ff7a70;--chip:#222833;--sel:#2a1d24;--peer:#8c97ab}}
-:root[data-theme=dark]{--bg:#0f1218;--card:#171b23;--ink:#e8ebf0;--mut:#9aa4b5;--line:#272d38;--acc:#ff4d6d;--pos:#3ecf8e;--neg:#ff7a70;--chip:#222833;--sel:#2a1d24;--peer:#8c97ab}
+:root{--bg:#f6f7f9;--card:#fff;--ink:#14181f;--mut:#5d6675;--line:#e3e6ec;--acc:#cc092f;--pos:#0b7a53;--neg:#b42318;--chip:#eef0f4;--sel:#fff3f5;--peer:#7a869a;--c1:#cc092f;--c2:#2f6fdb;--c3:#e0922f;--c4:#14a38b;--c5:#8a5cd6;--c6:#d6558b;--c7:#6b8e23;--c8:#8c97ab}
+@media (prefers-color-scheme:dark){:root{--bg:#0f1218;--card:#171b23;--ink:#e8ebf0;--mut:#9aa4b5;--line:#272d38;--acc:#ff4d6d;--pos:#3ecf8e;--neg:#ff7a70;--chip:#222833;--sel:#2a1d24;--peer:#8c97ab;--c1:#ff4d6d;--c2:#6aa0ff;--c3:#f0b04f;--c4:#3ecfb2;--c5:#b28cff;--c6:#ff7fb0;--c7:#a6c35a}}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 system-ui,Segoe UI,Roboto,sans-serif}
-header{padding:16px 20px;border-bottom:1px solid var(--line);background:var(--card);display:flex;gap:16px;align-items:baseline;flex-wrap:wrap}
-h1{font-size:18px;margin:0}h2{font-size:15px;margin:0 0 10px}
+.top{position:sticky;top:0;z-index:20;background:var(--card);border-bottom:1px solid var(--line);padding:10px 20px;display:flex;gap:18px;align-items:center;flex-wrap:wrap}
+.top h1{font-size:17px;margin:0}
 .sub{color:var(--mut);font-size:12px}
 main{padding:16px 20px;max-width:1500px;margin:auto}
-.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:14px}
-.ctrl{display:flex;flex-wrap:wrap;gap:14px 22px;align-items:flex-end}
-.ctrl label{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--mut)}
-.seg{display:flex;border:1px solid var(--line);border-radius:7px;overflow:hidden}
-.seg button{border:0;background:var(--card);color:var(--ink);padding:6px 10px;cursor:pointer;font:inherit;border-right:1px solid var(--line)}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.seg button{border:0;background:var(--card);color:var(--ink);padding:7px 13px;cursor:pointer;font:inherit;border-right:1px solid var(--line)}
 .seg button:last-child{border-right:0}.seg button.on{background:var(--acc);color:#fff}
-.chk{display:flex;gap:10px;flex-wrap:wrap}.chk label{flex-direction:row;align-items:center;gap:5px;color:var(--ink);font-size:13px}
-input[type=text],input[type=number],select{background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:7px;padding:6px 8px;font:inherit}
-input[type=text]{min-width:220px}input[type=number]{width:90px}
-.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px}
-.kpi{border:1px solid var(--line);border-radius:9px;padding:10px 12px}.kpi b{display:block;font-size:20px}.kpi span{color:var(--mut);font-size:12px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:14px}
+h2{font-size:15px;margin:0 0 10px}
+input[type=text]{background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:8px 10px;font:inherit;min-width:300px}
+label.chk{display:inline-flex;gap:6px;align-items:center;color:var(--ink);font-size:13px}
 table{border-collapse:collapse;width:100%}
-th,td{padding:6px 9px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
-th{position:sticky;top:0;background:var(--card);cursor:pointer;font-size:12px;color:var(--mut);user-select:none}
-th:first-child,td:first-child,th.l,td.l{text-align:left}
-td.l{max-width:340px;overflow:hidden;text-overflow:ellipsis}
-tbody tr{cursor:pointer}tbody tr:hover{background:var(--sel)}
+th,td{padding:7px 10px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+th{position:sticky;top:0;background:var(--card);cursor:pointer;font-size:12px;color:var(--mut);user-select:none;z-index:2}
+th.l,td.l{text-align:left}td.l{max-width:380px;overflow:hidden;text-overflow:ellipsis}
+tbody tr.c{cursor:pointer}tbody tr:hover{background:var(--sel)}
+.scroll{overflow:auto;max-height:70vh;border:1px solid var(--line);border-radius:10px}
 .pos{color:var(--pos)}.neg{color:var(--neg)}.mut{color:var(--mut)}
-.scroll{overflow:auto;max-height:640px;border:1px solid var(--line);border-radius:8px}
-.pager{display:flex;gap:10px;align-items:center;margin-top:8px;color:var(--mut)}
-.pager button{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:6px;padding:4px 10px;cursor:pointer}
-#modal{position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;align-items:flex-start;justify-content:center;overflow:auto;padding:24px;z-index:9}
-#modal .box{background:var(--bg);border-radius:12px;max-width:1100px;width:100%;padding:18px;border:1px solid var(--line)}
-.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}@media(max-width:900px){.grid2{grid-template-columns:1fr}}
-.tag{display:inline-block;background:var(--chip);border-radius:5px;padding:1px 7px;font-size:12px;margin-right:5px;color:var(--mut)}
+.tag{display:inline-block;border-radius:6px;padding:1px 9px;font-size:12px;font-weight:600;background:var(--chip);color:var(--mut)}
+.tag.G{background:var(--acc);color:#fff}.tag.M{background:color-mix(in srgb,var(--c2) 22%,transparent);color:var(--c2)}.tag.P{background:var(--chip);color:var(--mut)}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px;margin-bottom:14px}
+.kc{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+.kc .t{font-size:12px;color:var(--mut);text-transform:uppercase;letter-spacing:.03em}
+.kc .v{font-size:24px;font-weight:700;margin:4px 0 2px;line-height:1.15;word-break:break-word}
+.kc .s{font-size:12px;color:var(--mut)}
+.kc .row{display:flex;justify-content:space-between;font-size:13px;margin-top:3px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}@media(max-width:950px){.grid2{grid-template-columns:1fr}}
+.stack{display:flex;height:26px;border-radius:7px;overflow:hidden;margin:6px 0 10px;background:var(--chip)}
+.stack i{display:block;height:100%}
+.leg span{display:inline-flex;align-items:center;gap:5px;margin:0 14px 4px 0;font-size:12px;color:var(--mut)}.leg i{width:10px;height:10px;border-radius:2px;display:inline-block}
+.bar{display:inline-block;height:9px;border-radius:3px;background:var(--acc);vertical-align:middle;opacity:.85}
+.chips span{cursor:pointer;margin:0 6px 6px 0}
 svg text{fill:var(--mut);font-size:11px}
-.legend span{margin-right:14px;font-size:12px;color:var(--mut)}.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px}
-.x{float:right;cursor:pointer;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:6px;padding:3px 10px}
-details summary{cursor:pointer;color:var(--mut)}
-.bar{position:sticky;top:0;z-index:20;padding:10px 14px;box-shadow:0 2px 8px rgba(0,0,0,.12)}
-.bar summary{cursor:pointer;color:var(--mut);font-size:12px;margin-top:8px}
-#gtbl th:nth-child(1),#gtbl td:nth-child(1),#gwt th:nth-child(1),#gwt td:nth-child(1){position:sticky;left:0;background:var(--card);z-index:3;min-width:34px}
-#gtbl th:nth-child(2),#gtbl td:nth-child(2),#gwt th:nth-child(2),#gwt td:nth-child(2){position:sticky;left:34px;background:var(--card);z-index:3;min-width:240px;max-width:260px;box-shadow:2px 0 0 var(--line)}
-#gtbl th:nth-child(-n+2),#gwt th:nth-child(-n+2){z-index:4}
-#gtbl,#gwt{font-size:13px}
-.gp{display:none;margin-top:12px}.gp.on{display:block}
-.tabs{display:inline-flex;margin-top:4px}
-.kpi .tag{margin:2px 4px 2px 0;white-space:normal}
+.btn{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:8px;padding:6px 12px;cursor:pointer;font:inherit}
+.ctrl{display:flex;gap:12px 20px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
+.empty{padding:40px 10px;text-align:center;color:var(--mut)}
+.doc h3{font-size:14px;margin:18px 0 6px}.doc p,.doc li{max-width:900px}.doc code,.eq{background:var(--chip);border-radius:5px;padding:1px 6px;font-family:Consolas,monospace;font-size:12.5px}
+.eq{display:block;padding:8px 12px;margin:6px 0;width:fit-content}.doc table{max-width:900px}.doc td,.doc th{text-align:left;white-space:normal;cursor:default}
 </style>
 </head>
 <body>
-<header>
-  <h1>Monitor de Captação · Multimercado por Gestora</h1>
-  <span class="sub" id="hdr"></span>
-  <span class="sub" style="margin-left:auto">Fonte: dados abertos CVM (Informe Diário + Registro de Fundo/Classe)</span>
-</header>
+<div class="top">
+  <h1>Captação de Fundos</h1>
+  <div class="seg" id="tabs"><button data-v="p" class="on">Panorama</button><button data-v="g">Gestoras</button><button data-v="m">Como é calculado</button></div>
+  <div style="display:flex;gap:8px;align-items:center"><span class="sub">Janela</span><div class="seg" id="segWin"></div></div>
+  <label class="chk" title="Fundos exclusivos têm captação irregular; por padrão ficam de fora"><input type="checkbox" id="ex"> incluir exclusivos</label>
+  <label class="chk" title="Fundo de cotas (FIC) investe quase todo o PL no fundo master, que também é contado. Desmarcado = soma os dois (duplica o PL)."><input type="checkbox" id="nofic" checked> sem fundos de cotas (FIC)</label>
+  <div style="display:flex;gap:8px;align-items:center"><span class="sub">Tipo de fundo</span><select id="kcls" class="btn"></select></div>
+  <span class="sub" id="hdr" style="margin-left:auto"></span>
+</div>
 <main>
-<section class="card bar" id="bar">
-  <div class="ctrl">
-    <div class="seg" id="segView"><button data-v="g" class="on">Gestoras</button><button data-v="f">Fundos (detalhe)</button></div>
-    <label>Janela<div class="seg" id="segWin"></div></label>
-    <label>Medida<div class="seg" id="segMed"><button data-v="pct" class="on">% do PL inicial</button><button data-v="rs">R$ mi</button></div></label>
-    <label>Universo<div class="chk"><label><input type="checkbox" id="noex"> sem exclusivos</label>
-      <label><input type="checkbox" id="noprev"> sem previdência</label>
-      <label><input type="checkbox" id="nofic" checked title="Fundo de cotas (FIC): investe quase tudo no seu fundo master, que também é contado. Deixar marcado evita contar o mesmo PL duas vezes."> sem cotas (FIC)</label></div></label>
-    <label>Classe ANBIMA<select id="fa"></select></label>
+
+<!-- ============ PANORAMA ============ -->
+<div id="vP">
+  <div class="cards" id="pk"></div>
+  <div class="card">
+    <div class="ctrl">
+      <input type="text" id="pq" placeholder="Buscar gestora…">
+      <div class="seg" id="porteSeg"></div>
+      <button class="btn" id="pcsv" style="margin-left:auto">⬇ CSV desta lista</button>
+    </div>
+    <div class="scroll"><table id="ptbl"></table></div>
+    <p class="sub" style="margin-bottom:0">Porte pelo PL da gestora: <b>Pequena</b> &lt; R$ 1 bi · <b>Média</b> de R$ 1 bi a R$ 10 bi · <b>Grande</b> &gt; R$ 10 bi. Captação líquida = captação − resgate na janela escolhida. Clique numa gestora para abrir o detalhe.</p>
   </div>
-  <details id="adv"><summary>Filtros avançados · peers por fundo</summary>
-    <div class="ctrl" style="margin-top:8px">
-      <label>Peers = mesmo(a):<div class="chk" id="dims"></div></label>
-      <label>PL mínimo no início (R$ mi)<input type="number" id="minpl" value="5" min="0" step="1"></label>
-      <label>Mín. peers<input type="number" id="minpeers" value="5" min="2"></label>
-      <label>Buscar fundo<input type="text" id="q" placeholder="nome, CNPJ, gestor, administrador"></label>
-    </div></details>
-</section>
-
-<div id="vF" style="display:none">
-<p class="sub" style="margin:0 0 10px">Visão auxiliar para comparar fundos entre gestoras e peers diretamente. O relatório é organizado por gestora — veja a aba <b>Gestoras</b>.</p>
-<section class="card"><div class="kpis" id="kpis"></div></section>
-
-<section class="card">
-  <h2>Captação por classe ANBIMA <span class="sub" id="catsub"></span></h2>
-  <div class="scroll" style="max-height:340px"><table id="cat"></table></div>
-</section>
-
-<section class="card">
-  <h2>Fundos vs peers <span class="sub" id="tsub"></span></h2>
-  <div class="scroll"><table id="tbl"></table></div>
-  <div class="pager"><button id="prev">‹</button><span id="pg"></span><button id="next">›</button>
-    <button id="csv" style="margin-left:auto">Exportar CSV</button></div>
-  <details style="margin-top:10px"><summary>Como ler</summary>
-  <p class="sub">Captação líquida = captação − resgate no período. <b>% PL</b> = captação líquida ÷ PL no início da janela.
-  <b>Peer mediana / média pond.</b> são calculadas entre os demais fundos do mesmo grupo (dimensões marcadas), excluindo o próprio fundo e aplicando o PL mínimo.
-  <b>Spread</b> = fundo − mediana dos peers (em p.p.). <b>Percentil</b> = posição do fundo no grupo (100 = maior captação relativa).
-  <b>z</b> = desvio robusto (mediana/MAD). Fundos com PL pequeno no início geram % extremos: ajuste o PL mínimo.
-  Um fundo de cotas (FIC) investe quase todo o PL no seu fundo master, que também entra na base — por isso o filtro <b>"sem cotas (FIC)"</b> (Universo, acima) vem marcado por padrão, evitando contar o mesmo PL/fluxo duas vezes na soma por gestora. Desmarque para ver os FICs individualmente.
-  Classes com subclasses são consolidadas por CNPJ da classe.</p></details>
-</section>
 </div>
 
-<div id="vG">
-<section class="card">
-  <div class="ctrl">
-    <label>Escolher gestora<input type="text" id="gq" list="gl" placeholder="digite o nome e escolha" style="min-width:340px"></label>
-    <label>PL mínimo da gestora p/ ranking (R$ mi)<input type="number" id="gmin" value="100" min="0" step="50"></label>
-    <label style="flex-direction:row;align-items:center;gap:6px;color:var(--ink)"><input type="checkbox" id="gwonly"> só acompanhadas ★</label>
-    <span class="sub">Janela, medida e universo seguem os controles acima. Agregados usam todos os fundos da gestora com PL&gt;0 no início da janela. Clique em ☆ no ranking para acompanhar uma gestora.</span>
+<!-- ============ GESTORAS ============ -->
+<div id="vG" style="display:none">
+  <div class="card">
+    <div class="ctrl" style="margin-bottom:6px">
+      <input type="text" id="gq" list="gl" placeholder="Selecione ou pesquise a gestora…" style="min-width:420px">
+      <button class="btn" id="gclear">limpar</button>
+    </div>
+    <datalist id="gl"></datalist>
+    <div class="chips" id="gtop"></div>
   </div>
-  <datalist id="gl"></datalist>
   <div id="gdet"></div>
-</section>
-<section class="card"><h2>★ Gestoras acompanhadas</h2><div id="gwatch"></div></section>
-<section class="card"><div class="kpis" id="gkpis"></div></section>
-<section class="card">
-  <h2>Ranking de gestoras <span class="sub" id="grsub"></span></h2>
-  <div class="scroll" style="max-height:720px"><table id="gtbl"></table></div>
-  <div class="pager"><span id="gpg"></span><button id="gcsv" style="margin-left:auto">⬇ CSV do ranking</button></div>
-</section>
 </div>
+
+<!-- ============ METODOLOGIA ============ -->
+<div id="vM" style="display:none"></div>
 </main>
 
-<div id="modal"><div class="box" id="mbox"></div></div>
-
 <script>
-const DATA = /*__DADOS__*/null;
-const M = DATA.meta, FUNDOS = DATA.fundos;
-const $ = id => document.getElementById(id);
-const nf = (x,d=1)=> x==null||!isFinite(x)?'–':x.toLocaleString('pt-BR',{minimumFractionDigits:d,maximumFractionDigits:d});
-const mi = x => x==null?'–':nf(x/1000,1);
-const bi = x => x==null||!isFinite(x)?'–':nf(x/1e6,2);
-const cls = x => x==null||!isFinite(x)||x===0?'':(x>0?'pos':'neg');
-const esc = s => String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-const dbr = s => s? s.split('-').reverse().join('/') : '';
-
-const DIMS = [['a','Classe ANBIMA',true],['pa','Público-alvo',true],['fa','Faixa de PL',false],['fc','Fundo de cotas',false],['co','Condomínio',false],['g','Gestor',false],['ad','Administrador',false]];
-const st = {w:2, med:'pct', dims:new Set(['a','pa']), sort:'spread', dir:-1, page:0, rows:[]};
-const PAGE = 100;
-
-// ---- pré-processamento
-const faixa = pl => pl<10000?'<10 mi':pl<50000?'10–50 mi':pl<200000?'50–200 mi':pl<1000000?'200 mi–1 bi':'>1 bi';
-FUNDOS.forEach(f=>{f.fa=faixa(f.pl);f.prev=/previd/i.test(f.a);});
-const classes = [...new Set(FUNDOS.map(f=>f.a))].sort();
-
-// ---- estatística
-const sortN = a=>a.slice().sort((x,y)=>x-y);
-function quant(s,p){ if(!s.length) return null; const i=(s.length-1)*p, lo=Math.floor(i), hi=Math.ceil(i); return s[lo]+(s[hi]-s[lo])*(i-lo); }
-function robust(vals){ const s=sortN(vals); const m=quant(s,.5); const dev=sortN(vals.map(v=>Math.abs(v-m))); return {m, mad:quant(dev,.5)*1.4826, s}; }
-function rankPct(s,x){ // percentil (0-100) de x em s ordenado
-  let lo=0,hi=s.length; while(lo<hi){const k=(lo+hi)>>1; if(s[k]<x) lo=k+1; else hi=k;}
-  let up=lo; while(up<s.length && s[up]<=x) up++; return 100*((lo+up)/2)/s.length; }
-
-function filtrar(){
-  const minpl = +$('minpl').value*1000, noex=$('noex').checked, noprev=$('noprev').checked, nofic=$('nofic').checked, fa=$('fa').value;
-  return FUNDOS.filter(f=>(!noex||!f.ex)&&(!noprev||!f.prev)&&(!nofic||f.fc!=='S')&&(!fa||f.a===fa));
-}
-const gkey = f => [...st.dims].map(d=>f[d]).join(' | ');
-function valor(f,w){ // valor da medida selecionada na janela w
-  if(st.med==='rs') return f.F[w];
-  const p=f.P0[w]; return (p>0&&f.F[w]!=null)? f.F[w]/p*100 : null;
-}
-function elegivel(f,w){ return f.P0[w]!=null && f.P0[w] >= +$('minpl').value*1000; }
-
-function calc(){
-  const w=st.w, U=filtrar(), minpeers=+$('minpeers').value;
-  const grupos=new Map();
-  U.forEach(f=>{ if(!elegivel(f,w)) return; const k=gkey(f); (grupos.get(k)||grupos.set(k,[]).get(k)).push(f); });
-  const stats=new Map();
-  grupos.forEach((fs,k)=>{
-    const vals=fs.map(f=>valor(f,w)).filter(v=>v!=null);
-    const sF=fs.reduce((a,f)=>a+f.F[w],0), sP=fs.reduce((a,f)=>a+f.P0[w],0);
-    const r=robust(vals); const mean=vals.reduce((a,b)=>a+b,0)/(vals.length||1);
-    stats.set(k,{n:fs.length,vals,s:r.s,med:r.m,mad:r.mad,mean,wavg: st.med==='pct'? sF/sP*100 : sF/fs.length,sF,sP,
-                 p25:quant(r.s,.25),p75:quant(r.s,.75)});
-  });
-  const rows=U.map(f=>{
-    const v=elegivel(f,w)?valor(f,w):null;
-    const s=stats.get(gkey(f)); let peer=null;
-    if(s && v!=null && s.n-1>=minpeers){
-      // retira o próprio fundo do conjunto de peers
-      const arr=s.s.slice(); const i=arr.indexOf(v); if(i>=0) arr.splice(i,1);
-      const r=robust(arr), nn=arr.length;
-      const sumF=s.sF-f.F[w], sumP=s.sP-f.P0[w];
-      peer={n:nn,med:r.m,mad:r.mad,mean:arr.reduce((a,b)=>a+b,0)/nn,
-            wavg: st.med==='pct'? sumF/sumP*100 : sumF/nn,
-            pctl:rankPct(r.s,v), z:r.mad>0?(v-r.m)/r.mad:null, spread:v-r.m};
-    }
-    return {f,v,peer};
-  });
-  return {U,stats,rows};
-}
-
-// ---- UI
-function build(){
-  $('hdr').textContent=`Dados até ${dbr(M.ultima)} · gerado em ${M.gerado} · ${FUNDOS.length.toLocaleString('pt-BR')} classes multimercado ativas`;
-  $('segWin').innerHTML=M.janelas.map((j,i)=>`<button data-i="${i}" class="${i===st.w?'on':''}" title="base: ${dbr(M.bases[i])}">${j}</button>`).join('');
-  $('segWin').onclick=e=>{const b=e.target.closest('button'); if(!b) return; st.w=+b.dataset.i; st.page=0; render();};
-  $('segMed').onclick=e=>{const b=e.target.closest('button'); if(!b) return; st.med=b.dataset.v; st.page=0; render();};
-  $('dims').innerHTML=DIMS.map(([k,n])=>`<label><input type="checkbox" data-k="${k}" ${st.dims.has(k)?'checked':''}> ${n}</label>`).join('');
-  $('dims').onchange=e=>{const k=e.target.dataset.k; e.target.checked?st.dims.add(k):st.dims.delete(k); st.page=0; render();};
-  $('fa').innerHTML='<option value="">Todas</option>'+classes.map(c=>`<option>${esc(c)}</option>`).join('');
-  ['minpl','minpeers','noex','noprev','nofic','fa'].forEach(id=>$(id).onchange=()=>{st.page=0;render();});
-  $('q').oninput=()=>{st.page=0;renderTable();};
-  $('prev').onclick=()=>{st.page=Math.max(0,st.page-1);renderTable();};
-  $('next').onclick=()=>{st.page++;renderTable();};
-  $('csv').onclick=exportCSV;
-  $('modal').onclick=e=>{if(e.target.id==='modal') $('modal').style.display='none';};
-  document.addEventListener('keydown',e=>{if(e.key==='Escape') $('modal').style.display='none';});
-}
-
-let CALC=null;
-function render(){
-  document.querySelectorAll('#segWin button').forEach(b=>b.classList.toggle('on',+b.dataset.i===st.w));
-  document.querySelectorAll('#segMed button').forEach(b=>b.classList.toggle('on',b.dataset.v===st.med));
-  CALC=calc(); MKT=null; renderKpis(); renderCats(); renderTable(); if(st.view==='g') renderGest();
-}
-const unit = ()=> st.med==='pct'?'%':' mi';
-const fmtV = v => v==null?'–': (st.med==='pct'? nf(v,2)+'%' : mi(v));
-
-function renderKpis(){
-  const w=st.w, U=CALC.U, el=U.filter(f=>elegivel(f,w));
-  const F=el.reduce((a,f)=>a+f.F[w],0), P=el.reduce((a,f)=>a+f.P0[w],0), C=el.reduce((a,f)=>a+f.C[w],0), R=el.reduce((a,f)=>a+f.R[w],0);
-  const ent=el.filter(f=>f.F[w]>0).length, plNow=U.reduce((a,f)=>a+f.pl,0);
-  const vals=el.map(f=>valor(f,w)).filter(v=>v!=null), r=robust(vals);
-  const k=[['Fundos no universo',U.length.toLocaleString('pt-BR'),`${el.length.toLocaleString('pt-BR')} elegíveis na janela`],
-    ['PL atual',`R$ ${nf(plNow/1e6,1)} bi`,'soma do universo'],
-    ['Captação líquida',`<span class="${cls(F)}">R$ ${nf(F/1e3,0)} mi</span>`,`${nf(F/P*100,2)}% do PL inicial`],
-    ['Captação bruta / Resgates',`R$ ${nf(C/1e3,0)} / ${nf(R/1e3,0)} mi`,'período'],
-    ['% fundos com captação líquida > 0',nf(ent/el.length*100,0)+'%',`${ent} de ${el.length}`],
-    ['Mediana dos fundos',st.med==='pct'?nf(r.m,2)+'%':'R$ '+mi(r.m)+' mi','p25–p75: '+(st.med==='pct'?nf(quant(r.s,.25),2)+'% a '+nf(quant(r.s,.75),2)+'%':mi(quant(r.s,.25))+' a '+mi(quant(r.s,.75)))]];
-  $('kpis').innerHTML=k.map(([a,b,c])=>`<div class="kpi"><span>${a}</span><b>${b}</b><span>${c}</span></div>`).join('');
-}
-
-function renderCats(){
-  const w=st.w, by=new Map();
-  CALC.U.forEach(f=>{ if(!elegivel(f,w)) return; (by.get(f.a)||by.set(f.a,[]).get(f.a)).push(f); });
-  const rows=[...by].map(([a,fs])=>{
-    const F=fs.reduce((x,f)=>x+f.F[w],0), P=fs.reduce((x,f)=>x+f.P0[w],0);
-    const vals=fs.map(f=>f.F[w]/f.P0[w]*100), r=robust(vals);
-    return {a,n:fs.length,pl:fs.reduce((x,f)=>x+f.pl,0),F,pct:F/P*100,med:r.m,ent:fs.filter(f=>f.F[w]>0).length/fs.length*100,
-            rt:quant(sortN(fs.map(f=>f.RT[w]).filter(v=>v!=null)),.5)};
-  }).sort((a,b)=>b.pl-a.pl);
-  $('catsub').textContent=`· janela ${M.janelas[w]} (base ${dbr(M.bases[w])})`;
-  $('cat').innerHTML='<thead><tr><th class="l">Classe ANBIMA</th><th>Fundos</th><th>PL (R$ bi)</th><th>Capt. líq. (R$ mi)</th><th>% PL (agregado)</th><th>% PL (mediana)</th><th>% c/ captação</th><th>Rent. mediana</th></tr></thead><tbody>'+
-   rows.map(r=>`<tr data-cat="${esc(r.a)}"><td class="l">${esc(r.a)}</td><td>${r.n}</td><td>${nf(r.pl/1e6,2)}</td><td class="${cls(r.F)}">${nf(r.F/1e3,0)}</td><td class="${cls(r.pct)}">${nf(r.pct,2)}%</td><td class="${cls(r.med)}">${nf(r.med,2)}%</td><td>${nf(r.ent,0)}%</td><td>${r.rt==null?'–':nf(r.rt,2)+'%'}</td></tr>`).join('')+'</tbody>';
-  $('cat').querySelector('tbody').onclick=e=>{const tr=e.target.closest('tr'); if(!tr) return; $('fa').value=tr.dataset.cat; st.page=0; render(); window.scrollTo({top:$('tbl').offsetTop-80,behavior:'smooth'});};
-}
-
-const COLS=[['n','Fundo (classe)',r=>r.f.n,'l'],['g','Gestor',r=>r.f.g,'l'],['a','ANBIMA',r=>r.f.a,'l'],['pa','Público',r=>r.f.pa,'l'],
- ['pl','PL (R$ bi)',r=>r.f.pl],['F','Capt. líq. (R$ mi)',r=>r.f.F[st.w]],['v',null,r=>r.v],['pmed','Peer mediana',r=>r.peer&&r.peer.med],
- ['spread','Spread (pp)',r=>r.peer&&r.peer.spread],['pctl','Percentil',r=>r.peer&&r.peer.pctl],['dc','Δ cotistas',r=>r.f.DC[st.w]],['rt','Rentab.',r=>r.f.RT[st.w]]];
-
-function renderTable(){
-  const q=$('q').value.trim().toLowerCase();
-  let rows=CALC.rows.filter(r=>r.v!=null);
-  if(q) rows=rows.filter(r=>(r.f.n+r.f.id+r.f.g+r.f.ad).toLowerCase().includes(q));
-  const col=COLS.find(c=>c[0]===st.sort)||COLS[9];
-  rows.sort((a,b)=>{const x=col[2](a),y=col[2](b); if(x==null&&y==null) return 0; if(x==null) return 1; if(y==null) return -1;
-    return (typeof x==='string'? x.localeCompare(y) : x-y)*st.dir;});
-  st.rows=rows;
-  const pages=Math.max(1,Math.ceil(rows.length/PAGE)); st.page=Math.min(st.page,pages-1);
-  const slice=rows.slice(st.page*PAGE,(st.page+1)*PAGE);
-  const vlabel= st.med==='pct'?'% PL':'Capt. (R$ mi)';
-  $('tbl').innerHTML='<thead><tr>'+COLS.map(c=>`<th data-s="${c[0]}" class="${c[3]||''}">${c[1]||vlabel}${st.sort===c[0]?(st.dir>0?' ▲':' ▼'):''}</th>`).join('')+'</tr></thead><tbody>'+
-   slice.map(r=>{const p=r.peer, f=r.f;
-    return `<tr data-id="${f.id}"><td class="l" title="${esc(f.n)} · ${f.id}">${esc(f.n)}</td><td class="l" title="${esc(f.ad)}">${esc(f.g)}</td><td class="l">${esc(f.a)}</td><td class="l">${esc(f.pa)}</td>
-    <td>${bi(f.pl)}</td><td class="${cls(f.F[st.w])}">${mi(f.F[st.w])}</td><td class="${cls(r.v)}"><b>${fmtV(r.v)}</b></td>
-    <td>${p?fmtV(p.med):'–'}</td><td class="${p?cls(p.spread):''}">${p?(st.med==='pct'?nf(p.spread,2):mi(p.spread)):'–'}</td>
-    <td>${p?nf(p.pctl,0):'–'}</td><td class="${cls(f.DC[st.w])}">${f.DC[st.w]==null?'–':f.DC[st.w].toLocaleString('pt-BR')}</td><td class="${cls(f.RT[st.w])}">${f.RT[st.w]==null?'–':nf(f.RT[st.w],2)+'%'}</td></tr>`;}).join('')+'</tbody>';
-  $('tbl').querySelector('thead').onclick=e=>{const th=e.target.closest('th'); if(!th) return; const s=th.dataset.s; if(st.sort===s) st.dir*=-1; else {st.sort=s; st.dir=-1;} renderTable();};
-  $('tbl').querySelector('tbody').onclick=e=>{const tr=e.target.closest('tr'); if(tr) detalhe(tr.dataset.id);};
-  $('pg').textContent=`${rows.length.toLocaleString('pt-BR')} fundos · página ${st.page+1}/${pages}`;
-  $('tsub').textContent=`· peers: ${[...st.dims].map(d=>DIMS.find(x=>x[0]===d)[1]).join(' × ')||'todo o universo'} · ${st.med==='pct'?'% do PL inicial':'R$ mi'} · ${M.janelas[st.w]}`;
-}
-
-function exportCSV(){
-  const head=['CNPJ','Fundo','Gestor','Administrador','ANBIMA','Publico','PL_mi','CaptLiq_mi','Valor','PeerMediana','PeerMediaPond','Spread','Percentil','z','NPeers','DeltaCotistas','Rentab'];
-  const lines=[head.join(';')].concat(st.rows.map(r=>{const f=r.f,p=r.peer; const n=x=>x==null?'':String(x).replace('.',',');
-    return [f.id,f.n,f.g,f.ad,f.a,f.pa,n(f.pl/1000),n(f.F[st.w]/1000),n(r.v),p?n(p.med):'',p?n(p.wavg):'',p?n(p.spread):'',p?n(p.pctl):'',p&&p.z!=null?n(p.z):'',p?p.n:'',n(f.DC[st.w]),n(f.RT[st.w])].map(x=>`"${String(x).replace(/"/g,'""')}"`).join(';');}));
-  const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob(['﻿'+lines.join('\n')],{type:'text/csv'})); a.download=`captacao_${M.janelas[st.w]}_${M.ultima}.csv`; a.click();
-}
-
-// ---- detalhe do fundo
-function peersOf(f){
-  return CALC.U.filter(g=>g!==f && gkey(g)===gkey(f));
-}
-function detalhe(id){
-  const f=FUNDOS.find(x=>x.id===id); if(!f) return;
-  const minp=+$('minpl').value*1000, peers=peersOf(f);
-  const pct=(fl,p)=>p>0?fl/p*100:null;
-  // tabela por janela
-  const jrows=M.janelas.map((j,w)=>{
-    const v=f.P0[w]>0?f.F[w]/f.P0[w]*100:null;
-    const ps=peers.filter(g=>g.P0[w]>=minp).map(g=>g.F[w]/g.P0[w]*100);
-    const r=ps.length?robust(ps):null;
-    const sF=peers.filter(g=>g.P0[w]>=minp).reduce((a,g)=>a+g.F[w],0), sP=peers.filter(g=>g.P0[w]>=minp).reduce((a,g)=>a+g.P0[w],0);
-    return {j,v,f:f.F[w],c:f.C[w],r:f.R[w],med:r&&r.m,wavg:sP?sF/sP*100:null,pctl:r&&v!=null?rankPct(r.s,v):null,n:ps.length,dc:f.DC[w],rt:f.RT[w],
-      prt:(()=>{const a=peers.map(g=>g.RT[w]).filter(x=>x!=null); return a.length?quant(sortN(a),.5):null;})()};
-  });
-  // mensal
-  const mv=M.meses.map((m,i)=>pct(f.MF[i],f.MP[i]));
-  const mp=M.meses.map((m,i)=>{const a=peers.filter(g=>g.MP[i]>=minp).map(g=>g.MF[i]/g.MP[i]*100); return a.length>=3?quant(sortN(a),.5):null;});
-  // diário acumulado (63 pregões)
-  const nd=M.datas_diarias.length, base=f.P0[3]; // janela 63d
-  const cum=a=>{let s=0;return a.map(v=>s+=v||0);};
-  const fc=cum(f.D).map(v=>base>0?v/base*100:null);
-  const pcs=peers.filter(g=>g.P0[3]>=minp).map(g=>cum(g.D).map(v=>v/g.P0[3]*100));
-  const pm=[...Array(nd).keys()].map(i=>pcs.length>=3?quant(sortN(pcs.map(a=>a[i])),.5):null);
-  const top=peers.filter(g=>g.P0[st.w]>0).sort((a,b)=>b.pl-a.pl).slice(0,15);
-
-  $('mbox').innerHTML=`<button class="x" onclick="document.getElementById('modal').style.display='none'">fechar ✕</button>
-  <h2 style="font-size:17px">${esc(f.n)}</h2>
-  <div style="margin-bottom:10px"><span class="tag">${f.id}</span><span class="tag">${esc(f.a)}</span><span class="tag">${esc(f.pa)}</span><span class="tag">${esc(f.co)}</span>${f.ex?'<span class="tag">Exclusivo</span>':''}<span class="tag">Gestor: ${esc(f.g)}</span><span class="tag">Adm: ${esc(f.ad)}</span><span class="tag">PL R$ ${bi(f.pl)} bi</span><span class="tag">${(f.nc||0).toLocaleString('pt-BR')} cotistas</span><span class="tag">${peers.length} peers (${[...st.dims].map(d=>DIMS.find(x=>x[0]===d)[1]).join(' × ')||'universo'})</span></div>
-  <div class="grid2">
-    <div class="card"><h2>Captação líquida mensal (% PL) vs mediana peers</h2>${barChart(M.meses,mv,mp)}<div class="legend"><span><i style="background:var(--acc)"></i>Fundo</span><span><i style="background:var(--peer)"></i>Mediana peers</span></div></div>
-    <div class="card"><h2>Captação líquida acumulada, 63 pregões (% PL)</h2>${lineChart(M.datas_diarias,fc,pm)}<div class="legend"><span><i style="background:var(--acc)"></i>Fundo</span><span><i style="background:var(--peer)"></i>Mediana peers</span></div></div>
-  </div>
-  <div class="card"><h2>Todas as janelas</h2><div class="scroll" style="max-height:none"><table><thead><tr><th>Janela</th><th>Capt. bruta (mi)</th><th>Resgates (mi)</th><th>Líquida (mi)</th><th>% PL</th><th>Peer mediana</th><th>Peer méd. pond.</th><th>Spread (pp)</th><th>Percentil</th><th>Peers</th><th>Δ cotistas</th><th>Rentab.</th><th>Rent. peers (med.)</th></tr></thead><tbody>
-  ${jrows.map(r=>`<tr><td>${r.j}</td><td>${mi(r.c)}</td><td>${mi(r.r)}</td><td class="${cls(r.f)}">${mi(r.f)}</td><td class="${cls(r.v)}"><b>${r.v==null?'–':nf(r.v,2)+'%'}</b></td><td>${r.med==null?'–':nf(r.med,2)+'%'}</td><td>${r.wavg==null?'–':nf(r.wavg,2)+'%'}</td><td class="${r.med!=null&&r.v!=null?cls(r.v-r.med):''}">${r.med!=null&&r.v!=null?nf(r.v-r.med,2):'–'}</td><td>${r.pctl==null?'–':nf(r.pctl,0)}</td><td>${r.n}</td><td class="${cls(r.dc)}">${r.dc==null?'–':r.dc.toLocaleString('pt-BR')}</td><td class="${cls(r.rt)}">${r.rt==null?'–':nf(r.rt,2)+'%'}</td><td>${r.prt==null?'–':nf(r.prt,2)+'%'}</td></tr>`).join('')}
-  </tbody></table></div></div>
-  <div class="card"><h2>Maiores peers (janela ${M.janelas[st.w]})</h2><div class="scroll" style="max-height:320px"><table><thead><tr><th class="l">Fundo</th><th class="l">Gestor</th><th>PL (bi)</th><th>Capt. líq. (mi)</th><th>% PL</th></tr></thead><tbody>
-  ${top.map(g=>`<tr data-id="${g.id}" onclick="detalhe('${g.id}')"><td class="l">${esc(g.n)}</td><td class="l">${esc(g.g)}</td><td>${bi(g.pl)}</td><td class="${cls(g.F[st.w])}">${mi(g.F[st.w])}</td><td class="${cls(g.F[st.w])}">${nf(g.F[st.w]/g.P0[st.w]*100,2)}%</td></tr>`).join('')}
-  </tbody></table></div></div>`;
-  $('modal').style.display='flex'; $('modal').scrollTop=0;
-}
-
-// ---- gráficos SVG
-function scaleY(vals,h,pad){ const a=vals.filter(v=>v!=null&&isFinite(v)); let lo=Math.min(0,...a),hi=Math.max(0,...a); if(hi===lo){hi=1;lo=-1;} const sp=hi-lo; lo-=sp*.05; hi+=sp*.05; return {lo,hi,y:v=>pad+(hi-v)/(hi-lo)*(h-2*pad)}; }
-function barChart(labels,a,b){
-  const W=520,H=230,L=44,B=34,n=labels.length, sc=scaleY([...a,...b],H-B,10), bw=(W-L)/n;
-  let s=`<svg viewBox="0 0 ${W} ${H}" width="100%">`;
-  for(let i=0;i<=4;i++){const v=sc.lo+(sc.hi-sc.lo)*i/4, y=sc.y(v); s+=`<line x1="${L}" x2="${W}" y1="${y}" y2="${y}" stroke="var(--line)"/><text x="${L-5}" y="${y+3}" text-anchor="end">${nf(v,1)}</text>`;}
-  const y0=sc.y(0); s+=`<line x1="${L}" x2="${W}" y1="${y0}" y2="${y0}" stroke="var(--mut)"/>`;
-  labels.forEach((m,i)=>{const x=L+i*bw;
-    if(a[i]!=null){const y=sc.y(a[i]); s+=`<rect x="${x+bw*.12}" width="${bw*.36}" y="${Math.min(y,y0)}" height="${Math.abs(y-y0)}" fill="var(--acc)"><title>${m} fundo: ${nf(a[i],2)}%</title></rect>`;}
-    if(b[i]!=null){const y=sc.y(b[i]); s+=`<rect x="${x+bw*.5}" width="${bw*.36}" y="${Math.min(y,y0)}" height="${Math.abs(y-y0)}" fill="var(--peer)"><title>${m} peers: ${nf(b[i],2)}%</title></rect>`;}
-    s+=`<text x="${x+bw/2}" y="${H-B+14}" text-anchor="middle">${m.slice(5)}/${m.slice(2,4)}</text>`;});
-  return s+'</svg>';
-}
-function lineChart(labels,a,b){
-  const W=520,H=230,L=44,B=34,n=labels.length, sc=scaleY([...a,...b],H-B,10), x=i=>L+i*(W-L-6)/(n-1);
-  let s=`<svg viewBox="0 0 ${W} ${H}" width="100%">`;
-  for(let i=0;i<=4;i++){const v=sc.lo+(sc.hi-sc.lo)*i/4, y=sc.y(v); s+=`<line x1="${L}" x2="${W}" y1="${y}" y2="${y}" stroke="var(--line)"/><text x="${L-5}" y="${y+3}" text-anchor="end">${nf(v,1)}</text>`;}
-  const path=(arr,c)=>{let d='',pen=false; arr.forEach((v,i)=>{if(v==null||!isFinite(v)){pen=false;return;} d+=(pen?'L':'M')+x(i).toFixed(1)+' '+sc.y(v).toFixed(1); pen=true;}); return `<path d="${d}" fill="none" stroke="${c}" stroke-width="2"/>`;};
-  s+=path(b,'var(--peer)')+path(a,'var(--acc)');
-  [0,Math.floor(n/2),n-1].forEach(i=>s+=`<text x="${x(i)}" y="${H-B+14}" text-anchor="middle">${dbr(labels[i]).slice(0,5)}</text>`);
-  return s+'</svg>';
-}
-
-// ================= VISÃO POR GESTORA =================
-st.view='g'; st.gsel=null; st.gsort='pl'; st.gdir=-1;
-let MKT=null, GAG=null;
-try{ st.watch=new Set(JSON.parse(localStorage.getItem('gwatch')||'[]')); }catch(e){ st.watch=new Set(); }
-const saveWatch=()=>{try{localStorage.setItem('gwatch',JSON.stringify([...st.watch]));}catch(e){}};
-const num=x=>x==null||!isFinite(x)?0:x;
-const norm=s=>String(s).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+const DATA=/*__DADOS__*/null, M=DATA.meta, FUNDOS=DATA.fundos;
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const nf=(x,d=1)=>x==null||!isFinite(x)?'–':x.toLocaleString('pt-BR',{minimumFractionDigits:d,maximumFractionDigits:d});
+const dbr=s=>s?s.split('-').reverse().join('/'):'';
+const norm=s=>String(s).normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase();
 const enc=encodeURIComponent, dec=decodeURIComponent;
-function setView(v){
-  st.view=v; $('vF').style.display=v==='f'?'':'none'; $('vG').style.display=v==='g'?'':'none';
-  document.querySelectorAll('#segView button').forEach(b=>b.classList.toggle('on',b.dataset.v===v));
-  if(v==='g') renderGest();
-}
-$('segView').onclick=e=>{const b=e.target.closest('button'); if(b) setView(b.dataset.v);};
-$('gmin').onchange=()=>renderGest(); $('gwonly').onchange=()=>renderGest();
-$('gq').oninput=()=>{const v=$('gq').value; if(GAG&&GAG.has(v)){st.gsel=v; renderGest();} else if(!v){st.gsel=null; renderGest();} else renderGest(true);};
-$('gcsv').onclick=()=>exportGestCSV();
-function selG(g){st.gsel=g; $('gq').value=g; renderGest(); window.scrollTo({top:0,behavior:'smooth'});}
-function toggleWatch(g){ st.watch.has(g)?st.watch.delete(g):st.watch.add(g); saveWatch(); renderGest(); }
+const cls=x=>x==null||!isFinite(x)||x===0?'':(x>0?'pos':'neg');
+const num=x=>x==null||!isFinite(x)?0:x;
+const sortN=a=>a.slice().sort((x,y)=>x-y);
+// média por fundo sem extremos (winsorizada 5%-95%): evita que um fundo novo com milhares de % distorça; arr deve estar ordenado
+function wmean(s){if(!s.length) return null; const lo=quant(s,.05), hi=quant(s,.95); return s.reduce((a,v)=>a+Math.min(Math.max(v,lo),hi),0)/s.length;}
+function quant(s,p){if(!s.length) return null; const i=(s.length-1)*p, lo=Math.floor(i), hi=Math.ceil(i); return s[lo]+(s[hi]-s[lo])*(i-lo);}
+// valores dos fundos vêm em R$ mil
+const mi=x=>x==null?'–':nf(x/1e3,1);                    // R$ mil -> R$ mi
+const bi=x=>x==null?'–':nf(x/1e6,2);                    // R$ mil -> R$ bi
+const brl=x=>x==null?'–':'R$ '+Math.round(x*1000).toLocaleString('pt-BR'); // R$ mil -> R$ inteiro, sem abreviar
+const pct=(x,d=2)=>x==null||!isFinite(x)?'–':nf(x,d)+'%';
+
+// ---- classificação
+const porteG=pl=>pl<1e6?'P':pl<1e7?'M':'G';                         // gestora: <1 bi pequena, <10 bi média, >=10 bi grande
+const nomeG={P:'Pequena',M:'Média',G:'Grande'};
+const porteF=pl=>pl<1e5?'P':pl<1e6?'M':'G';                         // fundo: <100 mi pequeno, <1 bi médio, >=1 bi grande
+const nomeF={P:'Pequeno',M:'Médio',G:'Grande'};
+const tag=(p,nome=nomeG)=>`<span class="tag ${p}">${nome[p]}</span>`;
+const MINPL=5000, MINPEERS=5;                                       // PL mínimo (R$ mil) p/ entrar nos % por fundo e nº mínimo de peers
+
+const st={w:2,tab:'p',ex:false,nofic:true,k:'',psort:'pl',pdir:-1,porte:'',gsel:null,fsort:'pl',fdir:-1};
+const U=()=>FUNDOS.filter(f=>(st.ex||!f.ex)&&(!st.nofic||f.fc!=='S')&&(!st.k||f.k===st.k));
 
 function aggF(fs,w){
-  let F=0,P=0,C=0,R=0,n=0,ent=0,pl=0,dc=0;
-  fs.forEach(f=>{pl+=f.pl; dc+=num(f.DC[w]); if(f.P0[w]>0){F+=num(f.F[w]);P+=f.P0[w];C+=num(f.C[w]);R+=num(f.R[w]);n++; if(f.F[w]>0) ent++;}});
-  return {nf:fs.length,n,pl,F,P,C,R,ent,dc,pct:P>0?F/P*100:null};
+  let F=0,P=0,C=0,R=0,n=0,ent=0,pl=0;
+  fs.forEach(f=>{pl+=f.pl; if(f.P0[w]>0){F+=num(f.F[w]);P+=f.P0[w];C+=num(f.C[w]);R+=num(f.R[w]);n++; if(f.F[w]>0) ent++;}});
+  return {nf:fs.length,n,pl,F,P,C,R,ent,pct:P>0?F/P*100:null};
 }
-function groupG(){ const by=new Map(); CALC.U.forEach(f=>{(by.get(f.g)||by.set(f.g,[]).get(f.g)).push(f);}); return by; }
-function rankInfo(list,key,g){
-  const arr=list.filter(x=>x[key]!=null).sort((a,b)=>b[key]-a[key]);
-  const i=arr.findIndex(x=>x.g===g); return {pos:i<0?null:i+1,n:arr.length};
-}
-function marketTotals(){
-  if(MKT) return MKT;
-  const U=CALC.U, tot=aggF(U,st.w);
-  const mF=M.meses.map((m,i)=>U.reduce((a,f)=>a+num(f.MF[i]),0)), mP=M.meses.map((m,i)=>U.reduce((a,f)=>a+num(f.MP[i]),0));
-  const base=U.filter(f=>f.P0[3]>0), nd=M.datas_diarias.length;
-  const dF=[...Array(nd).keys()].map(i=>base.reduce((a,f)=>a+num(f.D[i]),0)), dP=base.reduce((a,f)=>a+f.P0[3],0);
-  return MKT={tot,mF,mP,dF,dP};
-}
-function computeG(){
-  const w=st.w, by=groupG(), gmin=+$('gmin').value*1000;
-  const rows=[...by].map(([g,fs])=>{const W=M.janelas.map((j,i)=>aggF(fs,i)); return {...W[w],g,fs,W,nf:fs.length};});
-  const rk=rows.filter(r=>r.pl>=gmin&&r.pct!=null);
-  const srt=sortN(rk.map(r=>r.pct)), med=quant(srt,.5);
-  [...rk].sort((a,b)=>b.pct-a.pct).forEach((r,i)=>r.rp=i+1);
-  [...rk].sort((a,b)=>b.F-a.F).forEach((r,i)=>r.rf=i+1);
-  const totPL=rows.reduce((a,r)=>a+r.pl,0);
-  rows.forEach(r=>{r.share=r.pl/totPL*100; r.pe=r.n?r.ent/r.n*100:null; r.spr=(r.pct!=null&&med!=null)?r.pct-med:null; r.pctl=r.pct!=null&&srt.length?rankPct(srt,r.pct):null;});
-  return {rows,rk,med,gmin,srt};
-}
-
-// ---- tabela de ranking (reutilizada na lista de acompanhadas)
-const gcols=()=>[['★','star'],['Gestora','g'],['PL (R$ bi)','pl'],['Capt. líq. '+M.janelas[st.w]+' (R$ mi)','F'+st.w],['% PL','pct'],['Spread vs mediana (pp)','spr'],['Rank % PL','rp']];
 const heat=(v,cap)=>{if(v==null||!isFinite(v)||v===0) return 'transparent'; const a=Math.min(Math.abs(v)/cap,1)*.34; return v>0?`rgba(16,160,110,${a.toFixed(2)})`:`rgba(224,56,44,${a.toFixed(2)})`;};
-const gval=(r,k)=>k==='g'?r.g:/^F\d$/.test(k)?r.W[+k[1]].F:k==='star'?(st.watch.has(r.g)?0:1):r[k];
-function gcell(r,k){
-  if(k==='star'){const on=st.watch.has(r.g); return `<td data-star="${enc(r.g)}" style="cursor:pointer;color:${on?'var(--acc)':'var(--mut)'};text-align:center" title="acompanhar">${on?'★':'☆'}</td>`;}
-  if(k==='g') return `<td class="l" title="${esc(r.g)}">${esc(r.g)}</td>`;
-  if(/^F\d$/.test(k)){const i=+k[1], v=r.W[i].F; return `<td class="${cls(v)}" style="background:${heat(v,(st.caps||[])[i]||1)};${i===st.w?'font-weight:700':''}">${mi(v)}</td>`;}
-  if(k==='nf') return `<td>${r.nf}</td>`; if(k==='pl') return `<td>${bi(r.pl)}</td>`; if(k==='share') return `<td>${nf(r.share,2)}%</td>`;
-  if(k==='pct') return `<td class="${cls(r.pct)}" style="background:${heat(r.pct,st.cpct||1)}"><b>${r.pct==null?'–':nf(r.pct,2)+'%'}</b></td>`;
-  if(k==='spr') return `<td class="${cls(r.spr)}">${r.spr==null?'–':nf(r.spr,2)}</td>`;
-  if(k==='pe') return `<td>${r.pe==null?'–':nf(r.pe,0)+'%'}</td>`;
-  if(k==='dc') return `<td class="${cls(r.dc)}">${r.dc.toLocaleString('pt-BR')}</td>`;
-  return `<td>${r[k]??'–'}</td>`;
-}
-function gtableHTML(list,sortable){
-  const C=gcols();
-  return '<thead><tr>'+C.map(([n,k])=>`<th ${sortable?`data-k="${k}"`:''} class="${k==='g'?'l':''}" ${k==='F'+st.w?'style="color:var(--acc)"':''}>${n}${sortable&&st.gsort===k?(st.gdir>0?' ▲':' ▼'):''}</th>`).join('')+'</tr></thead><tbody>'+
-    list.map(r=>`<tr data-g="${enc(r.g)}" ${r.g===st.gsel?'style="background:var(--sel)"':''}>${C.map(([n,k])=>gcell(r,k)).join('')}</tr>`).join('')+'</tbody>';
-}
-function bindG(tbl,sortable){
-  tbl.querySelector('tbody').onclick=e=>{
-    const star=e.target.closest('td[data-star]'); if(star){toggleWatch(dec(star.dataset.star)); return;}
-    const tr=e.target.closest('tr'); if(tr) selG(dec(tr.dataset.g));};
-  if(sortable) tbl.querySelector('thead').onclick=e=>{const th=e.target.closest('th'); if(!th||!th.dataset.k||th.dataset.k==='star') return; const k=th.dataset.k;
-    if(st.gsort===k) st.gdir*=-1; else {st.gsort=k; st.gdir=k==='g'?1:-1;} renderGest(true);};
+
+function gestoras(){
+  const by=new Map(); U().forEach(f=>{(by.get(f.g)||by.set(f.g,[]).get(f.g)).push(f);});
+  const rows=[...by].map(([g,fs])=>{const a=aggF(fs,st.w); return {g,fs,...a,porte:porteG(a.pl)};});
+  rows.sort((a,b)=>b.pl-a.pl).forEach((r,i)=>r.rankPL=i+1);
+  return rows;
 }
 
-function renderGest(soTabela){
-  const G=computeG(), {rows,rk,med,gmin}=G; st.G=G; GAG=new Map(rows.map(r=>[r.g,r]));
-  const w=st.w;
-  $('gl').innerHTML=rows.slice().sort((a,b)=>b.pl-a.pl).map(r=>`<option value="${esc(r.g)}">`).join('');
-  const j=M.janelas[w];
-  const base=rk.length?rk:rows;
-  st.caps=M.janelas.map((j,i)=>quant(sortN(base.map(r=>Math.abs(r.W[i].F))),.92)||1); st.cpct=quant(sortN(base.map(r=>Math.abs(r.pct||0))),.92)||1;
-  // KPIs do universo por gestora
-  const F=rk.reduce((a,r)=>a+r.F,0), P=rk.reduce((a,r)=>a+r.P,0), pos=rk.filter(r=>r.F>0).length;
-  const top=[...rk].sort((a,b)=>b.F-a.F), chip=(r)=>`<span class="tag" style="cursor:pointer" onclick="selG(decodeURIComponent('${enc(r.g)}'))">${esc(r.g.length>30?r.g.slice(0,30)+'…':r.g)} <span class="${cls(r.F)}" style="font-weight:700">${mi(r.F)}</span></span>`;
-  $('gkpis').innerHTML=`<div class="kpi"><span>Gestoras (PL ≥ R$ ${$('gmin').value} mi)</span><b>${rk.length}</b><span>${nf(rk.reduce((a,r)=>a+r.pl,0)/1e6,1)} bi de PL</span></div>
-   <div class="kpi"><span>Captação líquida ${j}</span><b class="${cls(F)}">R$ ${nf(F/1e3,0)} mi</b><span>${nf(F/P*100,2)}% do PL inicial</span></div>
-   <div class="kpi"><span>Mediana das gestoras</span><b>${med==null?'–':nf(med,2)+'%'}</b><span>% do PL</span></div>
-   <div class="kpi"><span>Gestoras com captação líquida &gt; 0</span><b>${nf(pos/Math.max(rk.length,1)*100,0)}%</b><span>${pos} de ${rk.length}</span></div>
-   <div class="kpi" style="grid-column:span 2"><span>Maiores captações (R$ mi)</span><div style="margin-top:4px">${top.slice(0,5).map(chip).join('')}</div></div>
-   <div class="kpi" style="grid-column:span 2"><span>Maiores resgates líquidos (R$ mi)</span><div style="margin-top:4px">${top.slice(-5).reverse().map(chip).join('')}</div></div>`;
-  // acompanhadas
-  const wl=rows.filter(r=>st.watch.has(r.g)).sort((a,b)=>b.pl-a.pl);
-  $('gwatch').parentElement.style.display=wl.length?'':'none';
-  $('gwatch').innerHTML=wl.length?`<div class="scroll" style="max-height:340px"><table id="gwt"></table></div>`:'<p class="sub">Nenhuma gestora acompanhada. Clique em ☆ no ranking para fixar aqui (fica salvo neste navegador).</p>';
-  if(wl.length){ $('gwt').innerHTML=gtableHTML(wl,false); bindG($('gwt'),false); }
-  // ranking
-  const exato=GAG.has($('gq').value), q=exato?'':norm($('gq').value), so=$('gwonly').checked;
-  let list=rows.filter(r=>r.pl>=gmin&&(!so||st.watch.has(r.g))&&(!q||norm(r.g).includes(q)));
-  list.sort((a,b)=>{const x=gval(a,st.gsort),y=gval(b,st.gsort); if(x==null) return 1; if(y==null) return -1; return (typeof x==='string'?x.localeCompare(y):x-y)*st.gdir;});
-  st.glist=list;
-  $('grsub').textContent=`· ${list.length} gestoras · destaque: janela ${j} (base ${dbr(M.bases[w])}) · R$ mi`;
-  $('gtbl').innerHTML=gtableHTML(list.slice(0,300),true); bindG($('gtbl'),true);
-  $('gpg').textContent=list.length>300?'mostrando as 300 primeiras (use a busca)':'';
-  if(soTabela===true) return;
-  if(st.gsel&&GAG.has(st.gsel)) detalheGest(st.gsel,rows,gmin); else $('gdet').innerHTML='<p class="sub">Escolha uma gestora na busca ou clique numa linha do ranking.</p>';
+// ---------- controles
+function build(){
+  $('hdr').textContent=`Dados até ${dbr(M.ultima)} · gerado em ${M.gerado}`;
+  $('segWin').innerHTML=M.janelas.map((j,i)=>`<button data-i="${i}" title="base: ${dbr(M.bases[i])}">${j}</button>`).join('');
+  $('segWin').onclick=e=>{const b=e.target.closest('button'); if(b){st.w=+b.dataset.i; render();}};
+  $('tabs').onclick=e=>{const b=e.target.closest('button'); if(b) setTab(b.dataset.v);};
+  $('ex').onchange=()=>{st.ex=$('ex').checked; render();};
+  $('nofic').onchange=()=>{st.nofic=$('nofic').checked; render();};
+  const ks=[...new Set(FUNDOS.map(f=>f.k))].sort();
+  $('kcls').innerHTML='<option value="">Todos os tipos</option>'+ks.map(k=>`<option>${esc(k)}</option>`).join('');
+  $('kcls').onchange=()=>{st.k=$('kcls').value; render();};
+  $('pq').oninput=renderPanorama;
+  $('pcsv').onclick=csvPanorama;
+  $('gq').oninput=()=>{const v=$('gq').value; if(GR&&GR.some(r=>r.g===v)){st.gsel=v; renderGest();}};
+  $('gclear').onclick=()=>{$('gq').value=''; st.gsel=null; renderGest();};
+}
+function setTab(v){
+  st.tab=v; $('vP').style.display=v==='p'?'':'none'; $('vG').style.display=v==='g'?'':'none'; $('vM').style.display=v==='m'?'':'none';
+  document.querySelectorAll('#tabs button').forEach(b=>b.classList.toggle('on',b.dataset.v===v));
+  render(); window.scrollTo(0,0);
+}
+function openG(g){st.gsel=g; $('gq').value=g; setTab('g');}
+let GR=null;
+function render(){
+  document.querySelectorAll('#segWin button').forEach(b=>b.classList.toggle('on',+b.dataset.i===st.w));
+  GR=gestoras();
+  if(st.tab==='p') renderPanorama(); else if(st.tab==='g') renderGest(); else renderMetodo();
 }
 
-function barSingle(labels,vals,fx){
-  const W=520,H=230,L=52,B=34,n=labels.length, sc=scaleY(vals,H-B,10), bw=(W-L)/n, step=Math.ceil(n/8);
+// ================= PANORAMA =================
+function renderPanorama(){
+  const w=st.w, j=M.janelas[w], rows=GR;
+  const tot=aggF(U(),w), q=norm($('pq').value);
+  const cnt={P:0,M:0,G:0}; rows.forEach(r=>cnt[r.porte]++);
+  $('pk').innerHTML=`<div class="kc"><div class="t">Gestoras</div><div class="v">${rows.length}</div><div class="s">Grandes ${cnt.G} · Médias ${cnt.M} · Pequenas ${cnt.P}</div></div>
+   <div class="kc"><div class="t">PL total</div><div class="v">R$ ${bi(tot.pl)} bi</div><div class="s">${tot.nf.toLocaleString('pt-BR')} fundos (classes)</div></div>
+   <div class="kc"><div class="t">Captação líquida ${j}</div><div class="v ${cls(tot.F)}">R$ ${nf(tot.F/1e3,0)} mi</div><div class="s">${pct(tot.pct)} do PL inicial · base ${dbr(M.bases[w])}</div></div>
+   <div class="kc"><div class="t">Gestoras com captação positiva</div><div class="v">${nf(rows.filter(r=>r.F>0).length/Math.max(rows.length,1)*100,0)}%</div><div class="s">${rows.filter(r=>r.F>0).length} de ${rows.length}</div></div>`;
+  $('porteSeg').innerHTML=[['','Todas ('+rows.length+')'],['G','Grandes ('+cnt.G+')'],['M','Médias ('+cnt.M+')'],['P','Pequenas ('+cnt.P+')']].map(([k,n])=>`<button data-k="${k}" class="${st.porte===k?'on':''}">${n}</button>`).join('');
+  $('porteSeg').onclick=e=>{const b=e.target.closest('button'); if(b){st.porte=b.dataset.k; renderPanorama();}};
+  let list=rows.filter(r=>(!st.porte||r.porte===st.porte)&&(!q||norm(r.g).includes(q)));
+  const key=st.psort, val=r=>key==='g'?r.g:key==='porte'?r.pl:r[key];
+  list.sort((a,b)=>{const x=val(a),y=val(b); if(x==null) return 1; if(y==null) return -1; return (typeof x==='string'?x.localeCompare(y):x-y)*st.pdir;});
+  st.plist=list;
+  const cap=quant(sortN(rows.map(r=>Math.abs(r.F))),.92)||1, capP=quant(sortN(rows.map(r=>Math.abs(r.pct||0))),.92)||1;
+  const C=[['#','rankPL'],['Gestora','g'],['Porte','porte'],['PL (R$ bi)','pl'],[`Captação líquida ${j} (R$ mi)`,'F'],['% do PL inicial','pct']];
+  $('ptbl').innerHTML='<thead><tr>'+C.map(([n,k])=>`<th data-k="${k}" class="${k==='g'||k==='porte'?'l':''}">${n}${st.psort===k?(st.pdir>0?' ▲':' ▼'):''}</th>`).join('')+'</tr></thead><tbody>'+
+   list.map(r=>`<tr class="c" data-g="${enc(r.g)}"><td class="mut">${r.rankPL}</td><td class="l" title="${esc(r.g)}">${esc(r.g)}</td><td class="l">${tag(r.porte)}</td><td>${bi(r.pl)}</td>
+     <td class="${cls(r.F)}" style="background:${heat(r.F,cap)}">${mi(r.F)}</td><td class="${cls(r.pct)}" style="background:${heat(r.pct,capP)}">${pct(r.pct)}</td></tr>`).join('')+'</tbody>';
+  $('ptbl').querySelector('thead').onclick=e=>{const th=e.target.closest('th'); if(!th) return; const k=th.dataset.k; if(st.psort===k) st.pdir*=-1; else {st.psort=k; st.pdir=k==='g'?1:-1;} renderPanorama();};
+  $('ptbl').querySelector('tbody').onclick=e=>{const tr=e.target.closest('tr'); if(tr) openG(dec(tr.dataset.g));};
+}
+function dl(nome,linhas){
+  const q=x=>`"${String(x??'').replace(/"/g,'""')}"`;
+  const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob(['﻿'+linhas.map(l=>l.map(q).join(';')).join('\n')],{type:'text/csv'}));
+  a.download=nome; document.body.appendChild(a); a.click(); a.remove();
+}
+const cn=x=>x==null?'':String(x).replace('.',',');
+function csvPanorama(){
+  const j=M.janelas[st.w];
+  dl(`gestoras_${j}_${M.ultima}.csv`,[['Gestora','Porte','PL_R$','Captacao_liquida_R$_'+j,'Pct_PL_inicial']].concat(st.plist.map(r=>[r.g,nomeG[r.porte],cn(r.pl*1000),cn(r.F*1000),cn(r.pct)])));
+}
+
+// ================= GESTORAS =================
+function renderGest(){
+  const w=st.w, j=M.janelas[w];
+  $('gl').innerHTML=GR.map(r=>`<option value="${esc(r.g)}">`).join('');
+  $('gtop').innerHTML=st.gsel?'':'<div class="sub" style="margin-bottom:6px">Maiores por PL:</div>'+GR.slice(0,14).map(r=>`<span class="tag" onclick="openG(decodeURIComponent('${enc(r.g)}'))">${esc(r.g.length>34?r.g.slice(0,34)+'…':r.g)}</span>`).join('');
+  const me=st.gsel&&GR.find(r=>r.g===st.gsel);
+  if(!me){$('gdet').innerHTML='<div class="card empty">Escolha uma gestora na busca acima ou clique numa linha do Panorama.</div>'; return;}
+  detalheGest(me,j);
+}
+
+function scaleY(vals,h,pad){const a=vals.filter(v=>v!=null&&isFinite(v)); let lo=Math.min(0,...a),hi=Math.max(0,...a); if(hi===lo){hi=1;lo=-1;} const sp=hi-lo; lo-=sp*.05; hi+=sp*.05; return {lo,hi,y:v=>pad+(hi-v)/(hi-lo)*(h-2*pad)};}
+function svgBars(labels,vals,fx,fv,colorFn){
+  const W=520,H=230,L=54,B=34,n=labels.length, sc=scaleY(vals,H-B,10), bw=(W-L)/n, step=Math.ceil(n/8);
   let s=`<svg viewBox="0 0 ${W} ${H}" width="100%">`;
-  for(let i=0;i<=4;i++){const v=sc.lo+(sc.hi-sc.lo)*i/4, y=sc.y(v); s+=`<line x1="${L}" x2="${W}" y1="${y}" y2="${y}" stroke="var(--line)"/><text x="${L-5}" y="${y+3}" text-anchor="end">${nf(v,0)}</text>`;}
+  for(let i=0;i<=4;i++){const v=sc.lo+(sc.hi-sc.lo)*i/4, y=sc.y(v); s+=`<line x1="${L}" x2="${W}" y1="${y}" y2="${y}" stroke="var(--line)"/><text x="${L-5}" y="${y+3}" text-anchor="end">${nf(v,Math.abs(sc.hi-sc.lo)<10?1:0)}</text>`;}
   const y0=sc.y(0); s+=`<line x1="${L}" x2="${W}" y1="${y0}" y2="${y0}" stroke="var(--mut)"/>`;
-  labels.forEach((m,i)=>{const v=vals[i], x=L+i*bw; if(v!=null){const y=sc.y(v); s+=`<rect x="${x+bw*.1}" width="${bw*.8}" y="${Math.min(y,y0)}" height="${Math.max(Math.abs(y-y0),.5)}" fill="${v<0?'var(--neg)':'var(--pos)'}"><title>${fx(m)}: R$ ${nf(v,1)} mi</title></rect>`;}
+  labels.forEach((m,i)=>{const v=vals[i], x=L+i*bw; if(v!=null){const y=sc.y(v); s+=`<rect x="${x+bw*.12}" width="${bw*.76}" y="${Math.min(y,y0)}" height="${Math.max(Math.abs(y-y0),.5)}" fill="${colorFn?colorFn(v,i):(v<0?'var(--neg)':'var(--pos)')}"><title>${fx(m)}: ${fv(v)}</title></rect>`;}
     if(i%step===0) s+=`<text x="${x+bw/2}" y="${H-B+14}" text-anchor="middle">${fx(m)}</text>`;});
   return s+'</svg>';
 }
-
-function plComposicao(fs,totalPl){
-  if(!totalPl) return '<p class="sub">Sem PL para compor.</p>';
-  const ord=[...fs].filter(f=>f.pl>0).sort((a,b)=>b.pl-a.pl);
-  const top=ord.slice(0,10), resto=ord.slice(10), restoPl=resto.reduce((s,f)=>s+f.pl,0);
-  const linhas=top.map(f=>({n:f.n,pl:f.pl}));
-  if(resto.length) linhas.push({n:`Outros ${resto.length} fundo${resto.length>1?'s':''}`,pl:restoPl});
-  const max=linhas.length?linhas[0].pl:1;
-  return linhas.map(l=>`<div style="display:flex;align-items:center;gap:8px;margin:4px 0">
-    <div style="flex:0 0 280px;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(l.n)}">${esc(l.n)}</div>
-    <div style="flex:1;background:var(--chip);border-radius:4px;height:14px"><div style="width:${Math.max(l.pl/max*100,1.5)}%;background:var(--acc);height:100%;border-radius:4px"></div></div>
-    <div style="flex:0 0 64px;text-align:right;font-size:12px"><b>${nf(l.pl/totalPl*100,1)}%</b></div>
-    <div style="flex:0 0 90px;text-align:right;font-size:11px;color:var(--mut)">R$ ${bi(l.pl)} bi</div>
-  </div>`).join('');
+function svgLines(labels,series,fx,fv){
+  const W=520,H=230,L=54,B=34,n=labels.length, all=series.flatMap(s=>s.v), sc=scaleY(all,H-B,10), x=i=>L+i*(W-L-6)/Math.max(n-1,1);
+  let s=`<svg viewBox="0 0 ${W} ${H}" width="100%">`;
+  for(let i=0;i<=4;i++){const v=sc.lo+(sc.hi-sc.lo)*i/4, y=sc.y(v); s+=`<line x1="${L}" x2="${W}" y1="${y}" y2="${y}" stroke="var(--line)"/><text x="${L-5}" y="${y+3}" text-anchor="end">${nf(v,Math.abs(sc.hi-sc.lo)<10?1:0)}</text>`;}
+  series.forEach(se=>{let d='',pen=false; se.v.forEach((v,i)=>{if(v==null||!isFinite(v)){pen=false;return;} d+=(pen?'L':'M')+x(i).toFixed(1)+' '+sc.y(v).toFixed(1); pen=true;});
+    s+=`<path d="${d}" fill="none" stroke="${se.c}" stroke-width="2"/>`;});
+  const step=Math.ceil(n/6); labels.forEach((m,i)=>{if(i%step===0||i===n-1) s+=`<text x="${x(i)}" y="${H-B+14}" text-anchor="middle">${fx(m)}</text>`;});
+  return s+'</svg>';
 }
-function detalheGest(g,rows,gmin){
-  const w=st.w, me=GAG.get(g), fs=me.fs, mk=marketTotals(), minpl=+$('minpl').value*1000, jn=M.janelas[w];
-  const elig=rows.filter(r=>r.pl>=gmin&&r.pct!=null);
-  const outros=(ww)=>{const t=aggF(CALC.U,ww), a=me.W[ww]; return (t.P-a.P)>0?(t.F-a.F)/(t.P-a.P)*100:null;};
-  const jr=M.janelas.map((j,ww)=>{
-    const a=me.W[ww], vals=elig.filter(r=>r.g!==g&&r.W[ww].pct!=null).map(r=>r.W[ww].pct);
-    const sim=elig.filter(r=>r.g!==g&&r.W[ww].pct!=null&&r.pl>=me.pl*.5&&r.pl<=me.pl*2).map(r=>r.W[ww].pct);
-    const all=elig.map(r=>({g:r.g,pct:r.W[ww].pct})); if(!all.some(r=>r.g===g)) all.push({g,pct:a.pct});
-    return {j,a,mkt:outros(ww),med:vals.length?quant(sortN(vals),.5):null,sim:sim.length>=3?quant(sortN(sim),.5):null,nsim:sim.length,rk:rankInfo(all,'pct',g),
-      rt:(()=>{const x=fs.filter(f=>f.P0[ww]>=minpl&&f.RT[ww]!=null).map(f=>f.RT[ww]); return x.length?quant(sortN(x),.5):null;})()};
-  });
-  const cur=jr[w], a=cur.a;
-  // mensal
+const fm=m=>m.length===7?m.slice(5)+'/'+m.slice(2,4):m, fd=d=>dbr(d).slice(0,5);
+
+function detalheGest(me,j){
+  const w=st.w, fs=me.fs, g=me.g, u=U();
+  // universo de peers por (classe, público) e mercado sem a gestora
+  const outras=u.filter(f=>f.g!==g), elOut=outras.filter(f=>f.P0[w]>=MINPL&&f.F[w]!=null);
+  const mktAgg=aggF(outras,w);
+  const idx=new Map(); u.forEach(f=>{if(f.P0[w]>=MINPL&&f.F[w]!=null){const k=f.a+'|'+f.pa; (idx.get(k)||idx.set(k,[]).get(k)).push(f.F[w]/f.P0[w]*100);}});
+  idx.forEach((v,k)=>idx.set(k,sortN(v)));
+  const fpct=f=>f.P0[w]>=MINPL&&f.F[w]!=null?f.F[w]/f.P0[w]*100:null;
+  const medMkt=wmean(sortN(elOut.map(f=>f.F[w]/f.P0[w]*100)));
+  const medMe=wmean(sortN(fs.map(fpct).filter(v=>v!=null)));
+  const nG={P:0,M:0,G:0}; fs.forEach(f=>nG[porteF(f.pl)]++);
+  const plG={P:0,M:0,G:0}; fs.forEach(f=>plG[porteF(f.pl)]+=f.pl);
+  const adm=new Map(); fs.forEach(f=>adm.set(f.ad,(adm.get(f.ad)||0)+f.pl)); const admTop=[...adm].sort((a,b)=>b[1]-a[1]).slice(0,3);
+
+  // por classe (linha)
+  const classes=[...new Set(fs.map(f=>f.a))].map(c=>{
+    const mine=fs.filter(f=>f.a===c), x=aggF(mine,w), others=outras.filter(f=>f.a===c), y=aggF(others,w);
+    const mm=wmean(sortN(mine.map(fpct).filter(v=>v!=null))), mo=wmean(sortN(others.filter(f=>f.P0[w]>=MINPL&&f.F[w]!=null).map(f=>f.F[w]/f.P0[w]*100)));
+    return {c,x,y,dif:x.pct!=null&&y.pct!=null?x.pct-y.pct:null,mm,mo,share:x.pl/me.pl*100};
+  }).sort((a,b)=>b.x.pl-a.x.pl);
+
+  // séries
   const gM=M.meses.map((m,i)=>({F:fs.reduce((s,f)=>s+num(f.MF[i]),0),P:fs.reduce((s,f)=>s+num(f.MP[i]),0)}));
-  const mv=gM.map(x=>x.P>0?x.F/x.P*100:null);
-  const mm=M.meses.map((m,i)=>{const p=mk.mP[i]-gM[i].P, x=mk.mF[i]-gM[i].F; return p>0?x/p*100:null;});
-  // diário
+  const labelsPL=[...M.meses.map(fm),'atual'], valsPL=[...gM.map(x=>x.P/1e6),me.pl/1e6];
   const nd=M.datas_diarias.length, fb=fs.filter(f=>f.P0[3]>0), gP=fb.reduce((s,f)=>s+f.P0[3],0);
   const gDay=[...Array(nd).keys()].map(i=>fb.reduce((s,f)=>s+num(f.D[i]),0));
-  let c1=0,c2=0; const gd=gDay.map(v=>{c1+=v; return gP>0?c1/gP*100:null;});
-  const md=gDay.map((v,i)=>{c2+=mk.dF[i]-v; return (mk.dP-gP)>0?c2/(mk.dP-gP)*100:null;});
-  // classes
-  const clsRows=[...new Set(fs.map(f=>f.a))].map(c=>{
-    const x=aggF(fs.filter(f=>f.a===c),w), y=aggF(CALC.U.filter(f=>f.a===c&&f.g!==g),w);
-    return {c,x,y,dif:x.pct!=null&&y.pct!=null?x.pct-y.pct:null};
-  }).sort((p,q)=>q.x.pl-p.x.pl);
-  // fundos
-  const byId=new Map(CALC.rows.map(r=>[r.f.id,r])); const frows=fs.map(f=>byId.get(f.id)).filter(Boolean).sort((p,q)=>q.f.pl-p.f.pl);
-  const withF=fs.filter(f=>f.P0[w]>0), pos=withF.filter(f=>f.F[w]>0), neg=withF.filter(f=>f.F[w]<0);
-  const sumPos=pos.reduce((s,f)=>s+f.F[w],0), sumNeg=neg.reduce((s,f)=>s+f.F[w],0);
-  const topIn=[...pos].sort((p,q)=>q.F[w]-p.F[w]), topOut=[...neg].sort((p,q)=>p.F[w]-q.F[w]);
-  const adm=new Map(); fs.forEach(f=>adm.set(f.ad,(adm.get(f.ad)||0)+f.pl)); const admTags=[...adm].sort((p,q)=>q[1]-p[1]).slice(0,5);
-  // insights
-  const ins=[];
-  if(a.pct!=null){
-    const dm=cur.mkt!=null?a.pct-cur.mkt:null;
-    ins.push(`Captação líquida de <b class="${cls(a.F)}">R$ ${nf(a.F/1e3,1)} mi</b> em ${jn} (${nf(a.pct,2)}% do PL inicial)`+(dm!=null?`, ${nf(Math.abs(dm),2)} p.p. ${dm>=0?'acima':'abaixo'} do restante do mercado (${nf(cur.mkt,2)}%).`:'.'));
-    if(cur.rk.pos) ins.push(`Ranking: <b>#${cur.rk.pos} de ${cur.rk.n}</b> gestoras por % do PL`+(me.rf?` e <b>#${me.rf}</b> em R$ captados`:'')+` (gestoras com PL ≥ R$ ${$('gmin').value} mi).`);
-    if(cur.sim!=null) ins.push(`Vs. gestoras de porte similar (0,5x–2x o PL, ${cur.nsim} gestoras): mediana ${nf(cur.sim,2)}% → a gestora está ${nf(Math.abs(a.pct-cur.sim),2)} p.p. ${a.pct>=cur.sim?'acima':'abaixo'}.`);
-  }
-  ins.push(`${pos.length} de ${withF.length} fundos tiveram captação líquida positiva (${nf(pos.length/Math.max(withF.length,1)*100,0)}%); entradas somam R$ ${nf(sumPos/1e3,1)} mi e saídas R$ ${nf(sumNeg/1e3,1)} mi.`);
-  if(topIn.length&&sumPos>0) ins.push(`Maior captador: <b>${esc(topIn[0].n)}</b> (R$ ${nf(topIn[0].F[w]/1e3,1)} mi, ${nf(topIn[0].F[w]/sumPos*100,0)}% das entradas).`);
-  if(topOut.length) ins.push(`Maior resgate líquido: <b>${esc(topOut[0].n)}</b> (R$ ${nf(topOut[0].F[w]/1e3,1)} mi).`);
-  const best=clsRows.filter(r=>r.dif!=null&&r.x.pl>0).sort((p,q)=>q.dif-p.dif);
-  if(best.length>1) ins.push(`Por classe ANBIMA, melhor relativo ao mercado: <b>${esc(best[0].c)}</b> (${nf(best[0].dif,2)} p.p.); pior: <b>${esc(best[best.length-1].c)}</b> (${nf(best[best.length-1].dif,2)} p.p.).`);
-  const t3=[...withF].sort((p,q)=>q.pl-p.pl).slice(0,3).reduce((s,f)=>s+f.pl,0); ins.push(`Concentração: os 3 maiores fundos respondem por ${nf(t3/me.pl*100,0)}% do PL da gestora.`);
-  const fm=(m)=>m.slice(5)+'/'+m.slice(2,4), fd=(d)=>dbr(d).slice(0,5);
-  const on=st.watch.has(g);
+  const ob=outras.filter(f=>f.P0[3]>0), oP=ob.reduce((s,f)=>s+f.P0[3],0), oDay=[...Array(nd).keys()].map(i=>ob.reduce((s,f)=>s+num(f.D[i]),0));
+  let c1=0,c2=0; const gc=gDay.map(v=>{c1+=v; return gP>0?c1/gP*100:null;}), mc=oDay.map(v=>{c2+=v; return oP>0?c2/oP*100:null;});
 
-  $('gdet').innerHTML=`<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><h2 style="font-size:17px;margin:0">${esc(g)}</h2>
-   <button class="b" style="border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:6px;padding:3px 10px;cursor:pointer" onclick="toggleWatch(decodeURIComponent('${enc(g)}'))">${on?'★ acompanhando':'☆ acompanhar'}</button>
-   <button class="b" style="border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:6px;padding:3px 10px;cursor:pointer" onclick="exportFundosGestora()">⬇ CSV dos fundos</button></div>
-  <div style="margin:8px 0 10px"><span class="tag">${me.nf} classes de fundos</span><span class="tag">PL R$ ${nf(me.pl/1e6,2)} bi</span><span class="tag">share ${nf(me.share,2)}% do universo</span>${admTags.map(([n,v])=>`<span class="tag">Adm: ${esc(n)} (R$ ${mi(v)} mi)</span>`).join('')}</div>
-  <div class="seg tabs" id="gtabs">${[['res','Resumo'],['ev','Evolução'],['jan','Janelas e classes'],['fun','Fundos ('+me.nf+')']].map(([k,n])=>`<button data-t="${k}">${n}</button>`).join('')}</div>
-  <div class="gp" data-t="res"><div class="kpis" style="margin-bottom:12px">
-   <div class="kpi"><span>Captação líquida ${jn}</span><b class="${cls(a.F)}">R$ ${nf(a.F/1e3,1)} mi</b><span>${a.pct==null?'–':nf(a.pct,2)+'% do PL inicial'}</span></div>
-   <div class="kpi"><span>Mercado (demais gestoras)</span><b>${cur.mkt==null?'–':nf(cur.mkt,2)+'%'}</b><span>agregado</span></div>
-   <div class="kpi"><span>Mediana das gestoras</span><b>${cur.med==null?'–':nf(cur.med,2)+'%'}</b><span>${cur.rk.n} gestoras</span></div>
-   <div class="kpi"><span>Ranking % PL</span><b>${cur.rk.pos?'#'+cur.rk.pos+' / '+cur.rk.n:'–'}</b><span>${me.rf?'#'+me.rf+' em R$':''}</span></div>
-   <div class="kpi"><span>Captação bruta / Resgate</span><b>${mi(a.C)} / ${mi(a.R)}</b><span>R$ mi</span></div>
-   <div class="kpi"><span>Δ cotistas</span><b class="${cls(a.dc)}">${a.dc.toLocaleString('pt-BR')}</b><span>na janela</span></div>
-  </div>
-  <div class="card"><h2>Composição do PL por fundo <span class="sub">quanto do PL da gestora está em cada fundo</span></h2>${plComposicao(fs,me.pl)}</div>
-  <div class="card" style="background:var(--bg)"><h2>Insights</h2><ul style="margin:0;padding-left:18px">${ins.map(i=>`<li style="margin:3px 0">${i}</li>`).join('')}</ul></div>
-  </div><div class="gp" data-t="ev"><div class="card"><h2>Captação líquida por mês</h2><div class="scroll" style="max-height:none"><table><thead><tr><th class="l"></th>${M.meses.map(m=>`<th>${fm(m)}</th>`).join('')}</tr></thead><tbody>
-   <tr><td class="l">Gestora (R$ mi)</td>${gM.map(x=>`<td class="${cls(x.F)}">${mi(x.F)}</td>`).join('')}</tr>
-   <tr><td class="l">Gestora (% PL)</td>${mv.map(v=>`<td class="${cls(v)}">${v==null?'–':nf(v,2)+'%'}</td>`).join('')}</tr>
-   <tr><td class="l">Demais gestoras (% PL)</td>${mm.map(v=>`<td class="mut">${v==null?'–':nf(v,2)+'%'}</td>`).join('')}</tr>
-   <tr><td class="l">Spread (pp)</td>${mv.map((v,i)=>{const d=v!=null&&mm[i]!=null?v-mm[i]:null; return `<td class="${cls(d)}">${d==null?'–':nf(d,2)}</td>`;}).join('')}</tr></tbody></table></div></div>
-  <div class="grid2">
-    <div class="card"><h2>Captação líquida mensal (R$ mi)</h2>${barSingle(M.meses,gM.map(x=>x.F/1000),fm)}</div>
-    <div class="card"><h2>Captação líquida diária (R$ mi), 63 pregões</h2>${barSingle(M.datas_diarias,gDay.map(v=>v/1000),fd)}</div>
-  </div>
-  <div class="grid2">
-    <div class="card"><h2>Captação mensal (% PL): gestora vs demais</h2>${barChart(M.meses,mv,mm)}<div class="legend"><span><i style="background:var(--acc)"></i>Gestora</span><span><i style="background:var(--peer)"></i>Demais (agregado)</span></div></div>
-    <div class="card"><h2>Captação acumulada, 63 pregões (% PL)</h2>${lineChart(M.datas_diarias,gd,md)}<div class="legend"><span><i style="background:var(--acc)"></i>Gestora</span><span><i style="background:var(--peer)"></i>Demais (agregado)</span></div></div>
-  </div>
-  </div><div class="gp" data-t="jan"><div class="card"><h2>Todas as janelas</h2><div class="scroll" style="max-height:none"><table><thead><tr><th>Janela</th><th class="n">Capt. bruta (R$ mi)</th><th class="n">Resgates (R$ mi)</th><th class="n">Capt. líq. (R$ mi)</th><th class="n">% PL</th><th class="n">Demais gestoras</th><th class="n">Mediana gestoras</th><th class="n">Porte similar (med.)</th><th class="n">Spread vs demais (pp)</th><th class="n">Ranking % PL</th><th class="n">Rent. mediana fundos</th></tr></thead><tbody>
-  ${jr.map((r,i)=>`<tr ${i===w?'style="background:var(--sel)"':''}><td>${r.j}</td><td>${mi(r.a.C)}</td><td>${mi(r.a.R)}</td><td class="${cls(r.a.F)}">${mi(r.a.F)}</td><td class="${cls(r.a.pct)}"><b>${r.a.pct==null?'–':nf(r.a.pct,2)+'%'}</b></td><td>${r.mkt==null?'–':nf(r.mkt,2)+'%'}</td><td>${r.med==null?'–':nf(r.med,2)+'%'}</td><td>${r.sim==null?'–':nf(r.sim,2)+'%'}</td><td class="${r.mkt!=null&&r.a.pct!=null?cls(r.a.pct-r.mkt):''}">${r.mkt!=null&&r.a.pct!=null?nf(r.a.pct-r.mkt,2):'–'}</td><td>${r.rk.pos?'#'+r.rk.pos+'/'+r.rk.n:'–'}</td><td>${r.rt==null?'–':nf(r.rt,2)+'%'}</td></tr>`).join('')}
-  </tbody></table></div></div>
-  <div class="card"><h2>Mix por classe ANBIMA vs mercado (${jn})</h2><div class="scroll" style="max-height:none"><table><thead><tr><th class="l">Classe</th><th>Fundos</th><th>PL (R$ bi)</th><th>Capt. líq. (R$ mi)</th><th>% PL gestora</th><th>% PL demais</th><th>Dif. (pp)</th></tr></thead><tbody>
-  ${clsRows.map(r=>`<tr><td class="l">${esc(r.c)}</td><td>${r.x.nf}</td><td>${bi(r.x.pl)}</td><td class="${cls(r.x.F)}">${mi(r.x.F)}</td><td class="${cls(r.x.pct)}">${r.x.pct==null?'–':nf(r.x.pct,2)+'%'}</td><td>${r.y.pct==null?'–':nf(r.y.pct,2)+'%'}</td><td class="${cls(r.dif)}">${r.dif==null?'–':nf(r.dif,2)}</td></tr>`).join('')}
-  </tbody></table></div></div>
-  </div><div class="gp" data-t="fun"><div class="card"><h2>Fundos da gestora <span class="sub">peers do fundo: ${[...st.dims].map(d=>DIMS.find(x=>x[0]===d)[1]).join(' × ')||'universo'}</span></h2><div class="scroll"><table><thead><tr><th class="l">Fundo</th><th class="l">ANBIMA</th><th class="l">Público</th><th>PL (R$ bi)</th><th>% PL gestora</th><th>Capt. líq. ${jn} (R$ mi)</th><th>% PL (${jn})</th><th>Peer mediana</th><th>Spread (pp)</th><th>Percentil</th><th>Δ cotistas</th><th>Rentab.</th></tr></thead><tbody>
-  <tr style="font-weight:700;background:var(--chip)"><td class="l">TOTAL DA GESTORA</td><td class="l"></td><td class="l"></td><td>${bi(me.pl)}</td><td>100,0%</td><td class="${cls(a.F)}">${mi(a.F)}</td><td class="${cls(a.pct)}">${a.pct==null?'–':nf(a.pct,2)+'%'}</td><td></td><td></td><td></td><td class="${cls(a.dc)}">${a.dc.toLocaleString('pt-BR')}</td><td></td></tr>
-  ${frows.map(r=>{const f=r.f,p=r.peer; const v=r.v!=null?r.v:(f.P0[w]>0&&f.F[w]!=null?(st.med==='pct'?f.F[w]/f.P0[w]*100:f.F[w]):null);
-   return `<tr style="cursor:pointer" onclick="detalhe('${f.id}')"><td class="l" title="${esc(f.n)}">${esc(f.n)}</td><td class="l">${esc(f.a)}</td><td class="l">${esc(f.pa)}</td><td>${bi(f.pl)}</td><td><b>${nf(me.pl>0?f.pl/me.pl*100:0,1)}%</b></td><td class="${cls(f.F[w])}">${mi(f.F[w])}</td><td class="${cls(v)}"><b>${fmtV(v)}</b></td><td>${p?fmtV(p.med):'–'}</td><td class="${p?cls(p.spread):''}">${p?(st.med==='pct'?nf(p.spread,2):mi(p.spread)):'–'}</td><td>${p?nf(p.pctl,0):'–'}</td><td class="${cls(f.DC[w])}">${f.DC[w]==null?'–':f.DC[w].toLocaleString('pt-BR')}</td><td class="${cls(f.RT[w])}">${f.RT[w]==null?'–':nf(f.RT[w],2)+'%'}</td></tr>`;}).join('')}
-  </tbody></table></div></div></div>`;
-  gtabApply();
-}
-function gtabApply(){
-  const t=st.gtab||'res';
-  document.querySelectorAll('#gdet .gp').forEach(d=>d.classList.toggle('on',d.dataset.t===t));
-  document.querySelectorAll('#gtabs button').forEach(b=>b.classList.toggle('on',b.dataset.t===t));
-}
-$('gdet').addEventListener('click',e=>{const b=e.target.closest('#gtabs button'); if(b){st.gtab=b.dataset.t; gtabApply();}});
+  // por classe CVM
+  const classesK=[...new Set(fs.map(f=>f.k))].map(c=>{
+    const x=aggF(fs.filter(f=>f.k===c),w), y=aggF(outras.filter(f=>f.k===c),w);
+    return {c,x,y,dif:x.pct!=null&&y.pct!=null?x.pct-y.pct:null,share:x.pl/me.pl*100};
+  }).sort((a,b)=>b.x.pl-a.x.pl);
+  // fundos da gestora
+  const frows=fs.map(f=>{
+    const v=fpct(f), arr=idx.get(f.a+'|'+f.pa); let pm=null;
+    if(v!=null&&arr){const a2=arr.slice(), i=a2.indexOf(v); if(i>=0) a2.splice(i,1); if(a2.length>=MINPEERS) pm=wmean(a2);}
+    return {f,v,pm,spr:v!=null&&pm!=null?v-pm:null,shr:f.pl/me.pl*100,porte:porteF(f.pl)};
+  });
+  const kf={n:r=>r.f.n,a:r=>r.f.a,k:r=>r.f.k,porte:r=>r.f.pl,pl:r=>r.f.pl,shr:r=>r.shr,F:r=>r.f.F[w],v:r=>r.v,pm:r=>r.pm,spr:r=>r.spr};
+  const fk=kf[st.fsort]||kf.pl; frows.sort((a,b)=>{const x=fk(a),y=fk(b); if(x==null) return 1; if(y==null) return -1; return (typeof x==='string'?x.localeCompare(y):x-y)*st.fdir;});
+  st.frows=frows;
+  const maxShr=Math.max(...frows.map(r=>r.shr),1);
+  const dif=me.pct!=null&&mktAgg.pct!=null?me.pct-mktAgg.pct:null;
 
-const csvQ=x=>`"${String(x??'').replace(/"/g,'""')}"`, csvN=x=>x==null?'':String(x).replace('.',',');
-function baixarArq(nome,txt){const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob(['\ufeff'+txt],{type:'text/csv'})); a.download=nome; document.body.appendChild(a); a.click(); a.remove();}
-function exportGestCSV(){
-  const head=['Gestora','Fundos','PL_mi','SharePL',...M.janelas.map(j=>'CaptLiq_mi_'+j),...M.janelas.map(j=>'PctPL_'+j),'SpreadVsMediana','RankPctPL','RankR$','PctFundosCaptacao','DeltaCotistas'];
-  const lines=[head.join(';')].concat((st.glist||[]).map(r=>[r.g,r.nf,csvN(r.pl/1000),csvN(r.share),...r.W.map(x=>csvN(x.F/1000)),...r.W.map(x=>csvN(x.pct)),csvN(r.spr),r.rp??'',r.rf??'',csvN(r.pe),r.dc].map(csvQ).join(';')));
-  baixarArq(`gestoras_${M.ultima}.csv`,lines.join('\n'));
+  $('gdet').innerHTML=`
+  <div class="card" style="padding:14px 16px">
+    <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap"><h2 style="font-size:19px;margin:0">${esc(g)}</h2>${tag(me.porte)}
+    <span class="sub">${admTop.map(([n,v])=>esc(n)).join(' · ')}</span></div>
+  </div>
+  <div class="cards">
+    <div class="kc"><div class="t">PL total</div><div class="v">${brl(me.pl)}</div><div class="s">R$ ${bi(me.pl)} bi · #${me.rankPL} de ${GR.length} gestoras em PL</div></div>
+    <div class="kc"><div class="t">Porte da gestora</div><div class="v">${nomeG[me.porte]}</div><div class="s">Pequena &lt; R$ 1 bi · Média até R$ 10 bi · Grande &gt; R$ 10 bi</div></div>
+    <div class="kc"><div class="t">Fundos grandes</div><div class="v">${nG.G} <span style="font-size:15px;font-weight:500" class="mut">de ${me.nf}</span></div>
+      <div class="row"><span>Grandes (&gt; R$ 1 bi)</span><b>${nG.G}</b></div><div class="row"><span>Médios (R$ 100 mi – 1 bi)</span><b>${nG.M}</b></div><div class="row"><span>Pequenos (&lt; R$ 100 mi)</span><b>${nG.P}</b></div></div>
+    <div class="kc"><div class="t">Captação líquida ${j}</div><div class="v ${cls(me.F)}">R$ ${nf(me.F/1e3,1)} mi</div><div class="s">${pct(me.pct)} do PL inicial · entradas R$ ${mi(me.C)} mi · saídas R$ ${mi(me.R)} mi</div></div>
+    <div class="kc"><div class="t">Vs. peers (% do PL, ${j})</div>
+      <div class="row"><span>Gestora (média ponderada)</span><b class="${cls(me.pct)}">${pct(me.pct)}</b></div>
+      <div class="row"><span>Mercado (demais gestoras)</span><b>${pct(mktAgg.pct)}</b></div>
+      <div class="row"><span>Média por fundo: gestora</span><b class="${cls(medMe)}">${pct(medMe)}</b></div>
+      <div class="row"><span>Média por fundo: mercado</span><b>${pct(medMkt)}</b></div>
+      <div class="s" style="margin-top:6px">${dif==null?'':`Gestora ${dif>=0?'acima':'abaixo'} do mercado em <b class="${cls(dif)}">${nf(Math.abs(dif),2)} p.p.</b>`}</div></div>
+  </div>
+  <div class="card"><div style="display:flex;align-items:center;gap:10px;margin-bottom:8px"><h2 style="margin:0">Fundos da gestora (${fs.length})</h2><button class="btn" id="fcsv" style="margin-left:auto">⬇ CSV dos fundos</button></div>
+    <div class="scroll"><table id="ftbl"><thead><tr>${[['n','Fundo','l'],['a','Classe ANBIMA','l'],['k','Classe CVM','l'],['porte','Porte','l'],['pl','PL (R$ mi)'],['shr','% do PL da gestora'],['F',`Capt. líq. ${j} (R$ mi)`],['v','% PL captação'],['pm','Peers (média)'],['spr','Spread (pp)']].map(([k,n,l])=>`<th data-k="${k}" class="${l||''}">${n}${st.fsort===k?(st.fdir>0?' ▲':' ▼'):''}</th>`).join('')}</tr></thead><tbody>
+    ${frows.map(r=>`<tr><td class="l" title="${esc(r.f.n)} · ${r.f.id}">${esc(r.f.n)}</td><td class="l">${esc(r.f.a)}</td><td class="l">${esc(r.f.k)}</td><td class="l">${tag(r.porte,nomeF)}</td><td>${mi(r.f.pl)}</td><td><span class="bar" style="width:${r.shr/maxShr*70}px"></span> ${nf(r.shr,1)}%</td><td class="${cls(r.f.F[w])}">${mi(r.f.F[w])}</td><td class="${cls(r.v)}">${pct(r.v)}</td><td>${pct(r.pm)}</td><td class="${cls(r.spr)}">${r.spr==null?'–':nf(r.spr,2)}</td></tr>`).join('')}
+    </tbody></table></div>
+    <p class="sub" style="margin:8px 0 0">Peers = outros fundos da mesma classe ANBIMA e público-alvo (mínimo ${MINPEERS}). Spread = % PL do fundo − média dos peers (sem extremos).</p>
+
+
+  <div class="card"><h2>PL por classe CVM</h2>
+    <div class="scroll" style="max-height:none"><table><thead><tr><th class="l">Classe CVM</th><th>Fundos</th><th>PL (R$ mi)</th><th>% do PL da gestora</th><th>Capt. líq. (R$ mi)</th><th>% PL gestora</th><th>% PL mercado na classe</th><th>Dif. (pp)</th></tr></thead><tbody>
+    ${classesK.map(c=>`<tr><td class="l">${esc(c.c)}</td><td>${c.x.nf}</td><td>${mi(c.x.pl)}</td><td>${nf(c.share,1)}%</td><td class="${cls(c.x.F)}">${mi(c.x.F)}</td><td class="${cls(c.x.pct)}">${pct(c.x.pct)}</td><td>${pct(c.y.pct)}</td><td class="${cls(c.dif)}">${c.dif==null?'–':nf(c.dif,2)}</td></tr>`).join('')}
+    </tbody></table></div></div>
+
+  <div class="card"><h2>PL por classe ANBIMA (linha)</h2>
+    <div class="scroll" style="max-height:none"><table><thead><tr><th class="l">Linha (classe ANBIMA)</th><th>Fundos</th><th>PL (R$ mi)</th><th>% do PL da gestora</th><th>Capt. líq. (R$ mi)</th><th>% PL gestora</th><th>% PL mercado na linha</th><th>Dif. (pp)</th><th>Média por fundo: gestora</th><th>Média por fundo: mercado</th></tr></thead><tbody>
+    ${classes.map(c=>`<tr><td class="l">${esc(c.c)}</td><td>${c.x.nf}</td><td>${mi(c.x.pl)}</td><td>${nf(c.share,1)}%</td><td class="${cls(c.x.F)}">${mi(c.x.F)}</td><td class="${cls(c.x.pct)}">${pct(c.x.pct)}</td><td>${pct(c.y.pct)}</td><td class="${cls(c.dif)}">${c.dif==null?'–':nf(c.dif,2)}</td><td class="${cls(c.mm)}">${pct(c.mm)}</td><td>${pct(c.mo)}</td></tr>`).join('')}
+    </tbody></table></div>
+    <p class="sub" style="margin:8px 0 0">“% PL mercado na linha” = outras gestoras na mesma classe ANBIMA. “Média por fundo” = média simples dos % de captação de cada fundo (PL inicial ≥ R$ 5 mi), limitada aos percentis 5–95 para não distorcer por fundos novos; a “média ponderada” pesa pelo PL.</p>
+  </div>
+
+  <div class="grid2">
+    <div class="card"><h2>Captação líquida mensal (R$ mi)</h2>${svgBars(M.meses,gM.map(x=>x.F/1e3),fm,v=>'R$ '+nf(v,1)+' mi')}</div>
+    <div class="card"><h2>Evolução do PL (R$ bi, início de cada mês)</h2>${svgBars(labelsPL,valsPL,m=>m,v=>'R$ '+nf(v,2)+' bi',()=>'var(--c2)')}</div>
+  </div>
+  <div class="grid2">
+    <div class="card"><h2>Captação líquida diária (R$ mi), 63 pregões</h2>${svgBars(M.datas_diarias,gDay.map(v=>v/1e3),fd,v=>'R$ '+nf(v,1)+' mi')}</div>
+    <div class="card"><h2>Captação acumulada, 63 pregões (% do PL)</h2>${svgLines(M.datas_diarias,[{v:mc,c:'var(--peer)'},{v:gc,c:'var(--acc)'}],fd,v=>nf(v,2)+'%')}
+      <div class="leg"><span><i style="background:var(--acc)"></i>Gestora</span><span><i style="background:var(--peer)"></i>Demais gestoras</span></div></div>
+  </div>
+
+  </div>`;
+  $('ftbl').querySelector('thead').onclick=e=>{const th=e.target.closest('th'); if(!th) return; const k=th.dataset.k; if(st.fsort===k) st.fdir*=-1; else {st.fsort=k; st.fdir=(k==='n'||k==='a'||k==='k')?1:-1;} renderGest();};
+  $('fcsv').onclick=()=>dl(`fundos_${g.replace(/[^\w]+/g,'_').slice(0,40)}_${M.ultima}.csv`,[['Fundo','CNPJ','Classe_ANBIMA','Porte','PL_R$','Pct_PL_gestora','Captacao_liquida_R$_'+j,'Pct_PL_captacao','Peers_mediana','Spread_pp']]
+    .concat(st.frows.map(r=>[r.f.n,r.f.id,r.f.a,nomeF[r.porte],cn(r.f.pl*1000),cn(r.shr),cn(num(r.f.F[w])*1000),cn(r.v),cn(r.pm),cn(r.spr)])));
 }
-function exportFundosGestora(){
-  const g=st.gsel; if(!g||!GAG.has(g)) return; const fs=GAG.get(g).fs;
-  const head=['Fundo','CNPJ','ANBIMA','Publico','PL_mi',...M.janelas.map(j=>'CaptLiq_mi_'+j),...M.janelas.map(j=>'Rent_'+j)];
-  const lines=[head.join(';')].concat(fs.slice().sort((a,b)=>b.pl-a.pl).map(f=>[f.n,f.id,f.a,f.pa,csvN(f.pl/1000),...f.F.map(x=>csvN(x==null?null:x/1000)),...f.RT.map(csvN)].map(csvQ).join(';')));
-  baixarArq(`fundos_${g.replace(/[^\w]+/g,'_').slice(0,40)}_${M.ultima}.csv`,lines.join('\n'));
+
+// ================= COMO É CALCULADO (por tabela) =================
+function renderMetodo(){
+  const w=st.w, j=M.janelas[w];
+  const ref=(GR.find(r=>r.g===st.gsel)||GR[0]);
+  const T=(titulo,onde,linhas)=>`<h3>${titulo} <span class="sub">— ${onde}</span></h3><table style="margin-bottom:6px"><thead><tr><th style="width:230px">Coluna / indicador</th><th>Como é calculado</th></tr></thead><tbody>${linhas.map(([a,b])=>`<tr><td><b>${a}</b></td><td>${b}</td></tr>`).join('')}</tbody></table>`;
+  const ex=ref?`<div class="card" style="background:var(--bg)"><b>Exemplo com números reais — ${esc(ref.g)}, janela ${j} (base ${dbr(M.bases[w])}):</b>
+    <p style="margin:6px 0 0">Captação bruta R$ ${mi(ref.C)} mi − resgates R$ ${mi(ref.R)} mi = <b>captação líquida R$ ${mi(ref.F)} mi</b>.<br>
+    Os mesmos fundos tinham R$ ${mi(ref.P)} mi de PL na data-base → ${mi(ref.F)} ÷ ${mi(ref.P)} × 100 = <b>${pct(ref.pct)}</b> do PL inicial.<br>
+    PL atual (soma dos fundos): ${brl(ref.pl)} = R$ ${bi(ref.pl)} bi → porte <b>${nomeG[ref.porte]}</b>.</p></div>`:'';
+  $('vM').innerHTML=`<div class="card doc"><h2>Como cada número é calculado</h2>
+  <p class="sub">Dados abertos da CVM. Valores em R$; nas telas “mi” = milhões e “bi” = bilhões. Abaixo: primeiro os conceitos comuns, depois <b>cada tabela da tela, coluna por coluna</b>.</p>${ex}
+
+  <h3>A. Conceitos comuns</h3>
+  <ul>
+  <li><b>Fontes:</b> <i>Informe Diário de Fundos</i> (captação, resgate, PL, cotistas por fundo e dia; defasagem de 1 a 2 dias — último dado ${dbr(M.ultima)}) e <i>Registro de Fundo/Classe</i> (nome, gestora, administrador, classe CVM, classe ANBIMA, público-alvo, exclusivo, fundo de cotas).</li>
+  <li><b>Quais fundos entram:</b> todas as classes de fundos com informe diário (fundos de investimento financeiro): <b>Multimercado, Renda Fixa, Ações, Cambial e FMP-FGTS</b>, em funcionamento normal, com informe nos últimos 5 pregões e PL &gt; 0. <b>Fundos fora do Informe Diário</b> (FIDC, FII, FIP, FIAGRO) <b>não têm captação diária e não entram</b>.</li>
+  <li><b>Filtros do topo:</b> “<i>sem exclusivos</i>” (padrão: ligado) tira fundos de cotista único — captam/resgatam em blocos e distorcem. “<i>sem fundos de cotas (FIC)</i>” (padrão: ligado) tira os fundos que investem quase todo o PL em outro fundo (o master), que também está na base: somar os dois contaria o mesmo dinheiro duas vezes. “<i>Tipo de fundo</i>” restringe a uma classe CVM.</li>
+  <li><b>Gestora</b> = nome no cadastro da CVM. Classes com subclasses são somadas numa só linha (por CNPJ da classe).</li>
+  <li><b>Janela e data-base:</b> a janela soma a captação do pregão seguinte à data-base até ${dbr(M.ultima)}; a data-base é onde se mede o <b>PL inicial</b>. Janelas em dias contam pregões; MTD/YTD partem do último pregão do mês/ano anterior.<br>
+  <table style="margin:6px 0"><thead><tr><th>Janela</th><th>Data-base</th></tr></thead><tbody>${M.janelas.map((x,i)=>`<tr ${i===w?'style="background:var(--sel)"':''}><td><b>${x}</b></td><td>${dbr(M.bases[i])}</td></tr>`).join('')}</tbody></table></li>
+  <li><b>Captação líquida</b> = Σ (captação do dia − resgate do dia) na janela. Positivo = entrada; negativo = saída.</li>
+  <li><b>% do PL inicial</b> = captação líquida ÷ PL na data-base × 100. Para um grupo de fundos: Σ captação líquida ÷ Σ PL inicial (= média ponderada pelo PL).</li>
+  <li><b>Só entram nessas contas fundos com PL &gt; 0 na data-base</b>; fundos criados dentro da janela ficam de fora (da gestora e do mercado).</li>
+  <li><b>Porte da gestora</b> (pelo PL atual): Pequena &lt; R$ 1 bi · Média de R$ 1 bi a R$ 10 bi · Grande ≥ R$ 10 bi. <b>Porte do fundo:</b> Pequeno &lt; R$ 100 mi · Médio de R$ 100 mi a R$ 1 bi · Grande ≥ R$ 1 bi.</li>
+  <li><b>Média por fundo</b> = média simples dos % PL de cada fundo (PL inicial ≥ R$ 5 mi), com extremos limitados aos percentis 5 e 95 (para um fundo novo que “captou” milhares de % não distorcer).</li>
+  <li><b>Peers de um fundo</b> = outros fundos da <b>mesma classe ANBIMA e mesmo público-alvo</b> (mínimo de 5), exceto ele próprio.</li>
+  </ul>
+
+  ${T('Tabela “Gestoras”','aba Panorama',[
+   ['# (posição)','Ordem decrescente do PL atual entre as gestoras do universo filtrado.'],
+   ['Gestora','Nome no cadastro da CVM.'],
+   ['Porte','Pelo PL atual: Pequena &lt; R$ 1 bi · Média até R$ 10 bi · Grande ≥ R$ 10 bi.'],
+   ['PL (R$ bi)','Σ do PL atual (último pregão) de todos os fundos da gestora no universo, ÷ 1.000.000.000.'],
+   ['Captação líquida (R$ mi)','Σ (captação − resgate) dos fundos da gestora na janela escolhida, ÷ 1.000.000. Só fundos com PL &gt; 0 na data-base.'],
+   ['% do PL inicial','Captação líquida da gestora ÷ Σ PL dos mesmos fundos na data-base × 100 (média ponderada).'],
+   ['Cor das células','Verde = entrada, vermelho = saída; intensidade proporcional ao valor, limitada ao percentil 92 das gestoras (para um extremo não apagar o resto).'],
+   ['Cards do topo','<b>Gestoras</b>: contagem por porte. <b>PL total</b>: Σ PL atual de todos os fundos. <b>Captação líquida</b>: Σ de todas as gestoras (e % sobre o PL inicial somado). <b>Gestoras com captação positiva</b>: % de gestoras com captação líquida &gt; 0.']])}
+
+  ${T('Cards da gestora','aba Gestoras, topo',[
+   ['PL total','Σ PL atual dos fundos da gestora (R$ inteiros, sem abreviar) e a posição (#) por PL entre as gestoras.'],
+   ['Porte da gestora','Regra do porte acima, sobre o PL atual.'],
+   ['Fundos grandes','Quantidade de fundos da gestora com PL atual ≥ R$ 1 bi; abaixo, a contagem de médios (R$ 100 mi – 1 bi) e pequenos (&lt; R$ 100 mi).'],
+   ['Captação líquida','Σ (captação − resgate) na janela; “entradas” = Σ captação, “saídas” = Σ resgates; % = líquida ÷ Σ PL inicial.'],
+   ['Gestora (média ponderada)','% PL inicial da gestora: Σ captação líquida ÷ Σ PL inicial.'],
+   ['Mercado','Mesma conta com todos os fundos do universo <b>exceto os da gestora</b>.'],
+   ['Média por fundo: gestora / mercado','Média simples (sem extremos) dos % PL de cada fundo da gestora / dos fundos das demais gestoras.'],
+   ['“Acima/abaixo do mercado”','% PL da gestora − % PL do mercado, em pontos percentuais (p.p.).']])}
+
+  ${T('Tabela “Fundos da gestora”','aba Gestoras',[
+   ['Fundo / Classe ANBIMA / Classe CVM','Cadastro da CVM (classe de cotas).'],
+   ['Porte','Pelo PL atual do fundo: Pequeno &lt; R$ 100 mi · Médio até R$ 1 bi · Grande ≥ R$ 1 bi.'],
+   ['PL (R$ mi)','PL do fundo no último pregão, ÷ 1.000.000.'],
+   ['% do PL da gestora','PL do fundo ÷ PL total da gestora (mesmo universo filtrado) × 100.'],
+   ['Captação líquida (R$ mi)','Σ (captação − resgate) do fundo na janela.'],
+   ['% PL captação','Captação líquida do fundo ÷ PL do fundo na data-base × 100 (só se PL inicial ≥ R$ 5 mi).'],
+   ['Peers (média)','Média (sem extremos, percentis 5–95) do % PL dos peers do fundo (mesma classe ANBIMA e público-alvo, sem o próprio fundo; precisa de ≥ 5).'],
+   ['Spread (pp)','% PL captação do fundo − Peers (média). Positivo = captando mais que os peers.']])}
+
+  ${T('Tabela “PL por classe CVM”','aba Gestoras',[
+   ['Classe CVM','Multimercado, Renda Fixa, Ações, Cambial ou FMP-FGTS (classificação do registro da CVM).'],
+   ['Fundos / PL (R$ mi)','Quantidade e Σ PL atual dos fundos da gestora nessa classe.'],
+   ['% do PL da gestora','PL da classe ÷ PL total da gestora × 100.'],
+   ['Capt. líq. (R$ mi) / % PL gestora','Σ captação líquida da gestora na classe; ÷ Σ PL inicial dessa classe na gestora.'],
+   ['% PL mercado na classe','Mesma conta com os fundos <b>das demais gestoras</b> na mesma classe CVM.'],
+   ['Dif. (pp)','% PL gestora − % PL mercado na classe.']])}
+
+  ${T('Tabela “PL por classe ANBIMA (linha)”','aba Gestoras',[
+   ['Linha (classe ANBIMA)','Classificação ANBIMA do cadastro (ex.: Multimercados Livre, Renda Fixa Duração Baixa Soberano…).'],
+   ['Fundos / PL (R$ mi) / % do PL da gestora','Igual à tabela por classe CVM, agora por linha ANBIMA.'],
+   ['Capt. líq. / % PL gestora / % PL mercado na linha / Dif.','Mesmas contas, restritas à linha; mercado = fundos das demais gestoras na mesma linha.'],
+   ['Média por fundo: gestora / mercado','Média simples (sem extremos) dos % PL por fundo na linha, da gestora e das demais gestoras.']])}
+
+  ${T('Gráficos da gestora','aba Gestoras',[
+   ['Captação líquida mensal (R$ mi)','Σ da captação líquida de todos os fundos da gestora em cada mês (o último é o mês corrente, parcial).'],
+   ['Evolução do PL (R$ bi)','Σ do PL de cada fundo no último pregão do mês anterior (“início do mês”); a última barra é o PL atual.'],
+   ['Captação líquida diária (R$ mi)',`Σ por dia nos últimos ${M.datas_diarias.length} pregões.`],
+   ['Captação acumulada (% PL)',`Soma acumulada da captação diária ÷ Σ PL de ${M.datas_diarias.length} pregões atrás dos mesmos fundos; comparada à das demais gestoras (calculada do mesmo jeito).`]])}
+
+  <h3>B. Tabelas exportadas</h3>
+  <p>A aba <b>Exportações</b> traz as mesmas contas, completas e em R$ inteiros, em CSV, Excel e Parquet — o dicionário de cada coluna está em <code>EXPORTACOES.md</code> (também copiado para <code>exportacoes/README.md</code>). Nas tabelas por gestora, a coluna <code>universo</code> diz o filtro usado: <code>todos</code>, <code>sem_exclusivos</code> ou <code>sem_cotas</code> (o padrão desta tela é sem exclusivos <b>e</b> sem FIC).</p>
+
+  <h3>C. Limitações</h3>
+  <ul><li>Só fundos com Informe Diário (FIF). FIDC, FII, FIP e FIAGRO não têm captação diária e ficam de fora.</li>
+  <li>Dados com 1 a 2 dias de defasagem; PL com precisão de R$ 100 (guardado em R$ mil com uma casa decimal).</li>
+  <li>Fundos exclusivos e FIC ficam fora por padrão; ligar/desligar muda os totais (a tela recalcula tudo).</li>
+  <li>A gestora é identificada pelo nome do cadastro; grafias diferentes aparecem como gestoras separadas.</li></ul></div>`;
 }
-// gestora clicável na tabela de fundos
-$('tbl').addEventListener('click',e=>{const td=e.target.closest('td.l'); if(!td||td.cellIndex!==1) return; e.stopPropagation(); const tr=td.closest('tr'); const f=FUNDOS.find(x=>x.id===tr.dataset.id); if(f){st.gsel=f.g; $('gq').value=f.g; setView('g'); window.scrollTo({top:0});}},true);
 
 build(); render();
 </script>

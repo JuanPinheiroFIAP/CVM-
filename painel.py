@@ -12,7 +12,7 @@ import sys
 from pathlib import Path
 
 AQUI = Path(__file__).parent
-ABAS = [("Captação Multimercado", AQUI / "data" / "tmp" / "monitor_captacao.html"),
+ABAS = [("Captação de Fundos", AQUI / "data" / "tmp" / "monitor_captacao.html"),
         ("Publicações CVM", AQUI / "data" / "tmp" / "publicacoes_cvm.html")]
 SAIDA = AQUI / "painel_cvm.html"
 
